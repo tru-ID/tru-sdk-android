@@ -35,14 +35,16 @@ android {
 
 publishing {
     publications {
-        library(MavenPublication) {
+        aar(MavenPublication) {
+            groupId = 'id.tru.sdk'
             artifactId = 'truid-sdk'
-            version = '0.1'
+            version = '0.0.2'
+            artifact("$buildDir/outputs/aar/${project.name}-release.aar")
         }
     }
     repositories {
         maven {
-            url "https://gitlab.com/api/v4/projects/20604720/packages/maven"
+            url "https://gitlab.com/api/v4/projects/22035475/packages/maven"
             credentials(HttpHeaderCredentials) {
                 name = "Private-Token"
                 value = gitLabPrivateToken // the variable resides in ~/.gradle/gradle.properties
