@@ -1,2 +1,2 @@
 include ':trusdk'
-rootProject.name = "Trusdk"
+rootProject.name = "trusdk"
