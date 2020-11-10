@@ -42,3 +42,8 @@ local.properties
 buck-out/
 \.buckd/
 *.keystore
+
+#VSCode
+.project
+.settings/
+.vscode/
