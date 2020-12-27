@@ -22,8 +22,8 @@ build.gradle -> dependencies add
 Compatibility
 -------------
 
- * **Minimum Android SDK**: Glide v4 requires a minimum API level of 21 (Android 5)
- * **Compile Android SDK**: Glide v4 requires you to compile against API 30  (Android 11) or later.
+ * **Minimum Android SDK**: TruSDK requires a minimum API level of 21 (Android 5)
+ * **Compile Android SDK**: TruSDK requires you to compile against API 30  (Android 11) or later.
 
 Usage example
 -------------
