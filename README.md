@@ -18,6 +18,12 @@ build.gradle -> dependencies add
     implementation 'id.tru.sdk:tru-sdk-android:0.0.1'
 ```
 
+Compatibility
+-------------
+
+ * **Minimum Android SDK**: Glide v4 requires a minimum API level of 21 (Android 5)
+ * **Compile Android SDK**: Glide v4 requires you to compile against API 30  (Android 11) or later.
+
 ## Usage example
 
 ```
