@@ -4,7 +4,8 @@
 [![License][license-image]][license-url]
 
 
-## Installation
+Installation
+-------------
 
 Add our maven public repository to your IDE
 
@@ -24,7 +25,8 @@ Compatibility
  * **Minimum Android SDK**: Glide v4 requires a minimum API level of 21 (Android 5)
  * **Compile Android SDK**: Glide v4 requires you to compile against API 30  (Android 11) or later.
 
-## Usage example
+Usage example
+-------------
 
 ```
 import id.tru.sdk.TruSDK
@@ -34,7 +36,8 @@ truSdk.openCheckUrl(checkUrl)
 ```
 
 
-## Build & Publish
+Build & Publish
+-------------
 
 Make sure the env var `ANDROID_SDK_ROOT` is defined (i.e `export ANDROID_SDK_ROOT=~/Library/Android/sdk`)
 
@@ -55,8 +58,8 @@ Update semver in build.gradle
  ./gradlew publish
 ```
 
-## Meta
-
+Meta
+-------------
 Distributed under the MIT license. See ``LICENSE`` for more information.
 
 [https://github.com/tru-ID](https://github.com/tru-ID)
