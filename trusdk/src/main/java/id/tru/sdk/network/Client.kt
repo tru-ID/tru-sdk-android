@@ -1,6 +1,27 @@
+/*
+ * MIT License
+ * Copyright (C) 2020 4Auth Limited. All rights reserved
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 package id.tru.sdk.network
 
-import android.content.ContentValues
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
@@ -8,13 +29,17 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
 import android.util.Log
+import androidx.annotation.NonNull
+import androidx.annotation.Nullable
 import androidx.annotation.RequiresApi
-
-import okhttp3.*
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import okio.IOException
 
+
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-class Client(applicationContext: Context) {
+internal class Client(applicationContext: Context) {
     private val context = applicationContext
     private val client = OkHttpClient()
 
@@ -46,22 +71,32 @@ class Client(applicationContext: Context) {
                         connectivityManager.bindProcessToNetwork(network)
                     }
                 } catch (e: IllegalStateException) {
-                    Log.e(ContentValues.TAG, "ConnectivityManager.NetworkCallback.onAvailable: ", e)
+                    Log.e(TAG, "ConnectivityManager.NetworkCallback.onAvailable: ", e)
                 }
             }
             override fun onLost(network: Network) {
                 super.onLost(network)
-                println("onLost: $network")
+                Log.d(TAG, "onLost: $network")
             }
             override fun onUnavailable() {
                 super.onUnavailable()
-                println("onUnavailable")
+                Log.d(TAG, "onUnavailable")
             }
-
         })
     }
 
-    fun requestSync(url: String, method: String, body: RequestBody?=null): String {
+    /**
+     * Request the @param url on the mobile device over the mobile data connection.
+     *
+     * @return The response as a string. By default, the response bytes are decoded as UTF-8.
+     *
+     * @throws IOException if the request could not be executed due to cancellation, a connectivity
+     *     problem or timeout. Because networks can fail during an exchange, it is possible that the
+     *     remote server accepted the request before the failure.
+     * @throws IllegalStateException when the call has already been executed.
+     */
+    @Throws(java.io.IOException::class)
+    fun requestSync(@NonNull url: String, @NonNull method: String, @Nullable body: RequestBody? = null): String {
         val request = Request.Builder()
             .method(method, body)
             .url(url)
@@ -71,9 +106,12 @@ class Client(applicationContext: Context) {
             if (!response.isSuccessful) throw IOException("Unexpected code $response")
 
             val rawResponse = response.body!!.string()
-            println("Response to $url")
-            println(rawResponse)
+            Log.d(TAG, "Response to $url")
+            Log.d(TAG, rawResponse)
             return rawResponse
         }
+    }
+    companion object {
+        private const val TAG = "Client"
     }
 }
