@@ -100,6 +100,7 @@ internal class Client(applicationContext: Context) {
         val request = Request.Builder()
             .method(method, body)
             .url(url)
+            .addHeader(HEADER_USER_AGENT, SDK_USER_AGENT)
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -113,5 +114,7 @@ internal class Client(applicationContext: Context) {
     }
     companion object {
         private const val TAG = "Client"
+        private const val HEADER_USER_AGENT = "User-Agent"
+        private const val SDK_USER_AGENT = "tru_sdk_android"
     }
 }

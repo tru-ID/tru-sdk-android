@@ -25,24 +25,19 @@ package id.tru.sdk
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
 import id.tru.sdk.network.Client
 import java.io.IOException
 
 /**
- * # Module TruSDK main entry point for executing a Phone Check.
- *
- * Prerequisites:
- *  Get the mobile application user's phone number and create a PhoneCheck via the tru.ID API and receive a unique check_url in the response.
- *
- * Request the check_url on the mobile device over the mobile data connection using a tru.ID SDK.
- *
- * Performs the phone check verification, by performing a network request against the Mobile carrier
- * ensuring required data connectivity (Wifi/3G) is used.
+ * TruSDK main entry point.
  *
  * Usage example
  * ```
+ * TruSDK.initializeSdk(requireContext())
  * private val truSdk = TruSDK.getInstance()
+ *
  * truSdk.openCheckUrl(checkUrl)
  * ```
  */
@@ -52,12 +47,16 @@ class TruSDK private constructor(context: Context) {
 
     /**
      * Execute a phone check verification, by performing a network request against the Mobile carrier
-     * ensuring required data connectivity (Wifi/3G) is used.
+     * over mobile data connection.
      *
      * Invokes the request immediately, and blocks until the response can be processed or is in error.
      *
+     * Prerequisites:
+     * Get the mobile application user's phone number and create a PhoneCheck via the tru.ID API
+     * in order to receive a unique `check_url` in the response.
+     * Request the `check_url` on the mobile device over the mobile data connection.
+     *
      * @param checkUrl The phone check url.
-     * @return The response as a string.
      *
      * @WorkerThread
      * @throws IOException if the request could not be executed due to cancellation, a connectivity
@@ -67,10 +66,10 @@ class TruSDK private constructor(context: Context) {
      */
     @Throws(java.io.IOException::class)
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-    fun openCheckUrl(checkUrl: String): String {
+    fun openCheckUrl(@NonNull checkUrl: String) {
 
         Log.i(TAG, "Triggering check url")
-        return client.requestSync(checkUrl, method = "GET")
+        client.requestSync(checkUrl, method = "GET")
     }
 
     companion object {
