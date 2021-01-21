@@ -32,6 +32,7 @@ import android.util.Log
 import androidx.annotation.NonNull
 import androidx.annotation.Nullable
 import androidx.annotation.RequiresApi
+import id.tru.sdk.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -100,7 +101,8 @@ internal class Client(applicationContext: Context) {
         val request = Request.Builder()
             .method(method, body)
             .url(url)
-            .addHeader(HEADER_USER_AGENT, SDK_USER_AGENT)
+            .addHeader(HEADER_USER_AGENT,SDK_USER_AGENT + "/"+ BuildConfig.VERSION_NAME + " "
+                       + "Android" + "/" + Build.VERSION.RELEASE)
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -115,6 +117,6 @@ internal class Client(applicationContext: Context) {
     companion object {
         private const val TAG = "Client"
         private const val HEADER_USER_AGENT = "User-Agent"
-        private const val SDK_USER_AGENT = "tru_sdk_android"
+        private const val SDK_USER_AGENT = "tru-sdk-android"
     }
 }
