@@ -43,17 +43,38 @@ import okio.IOException
 internal class Client(applicationContext: Context) {
     private val context = applicationContext
     private val client = OkHttpClient()
+    private val connectivityManager by lazy {
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
+    private var networkCallback:  ConnectivityManager.NetworkCallback? = null
 
-    init {
+    /**
+     * Request the @param url on the mobile device over the mobile data connection.
+     * Unless otherwise specified, response bytes are decoded as UTF-8.
+     *
+     * @throws IOException if the request could not be executed due to cancellation, a connectivity
+     *     problem or timeout. Because networks can fail during an exchange, it is possible that the
+     *     remote server accepted the request before the failure.
+     * @throws IllegalStateException when the call has already been executed.
+     */
+    @Throws(java.io.IOException::class)
+    fun requestSync(@NonNull url: String, @NonNull method: String, @Nullable body: RequestBody? = null) {
+
         val capabilities = intArrayOf(NetworkCapabilities.NET_CAPABILITY_INTERNET)
         val transportTypes = intArrayOf(NetworkCapabilities.TRANSPORT_CELLULAR)
+
         alwaysPreferNetworksWith(capabilities, transportTypes)
+
+        executeRequest(url, method, body)
+
+        // Release the request when done.
+        networkCallback?.let { connectivityManager.unregisterNetworkCallback(it) }
     }
 
     private fun alwaysPreferNetworksWith(
         capabilities: IntArray,
         transportTypes: IntArray
-    ) {
+    ): Boolean {
+        var preferredTransportSet = false
         val request = NetworkRequest.Builder()
 
         for (capability in capabilities) {
@@ -62,14 +83,14 @@ internal class Client(applicationContext: Context) {
         for (transportType in transportTypes) {
             request.addTransportType(transportType)
         }
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        connectivityManager.registerNetworkCallback(request.build(), object : ConnectivityManager.NetworkCallback() {
+
+        networkCallback = object:  ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 try {
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                        ConnectivityManager.setProcessDefaultNetwork(network)
+                        preferredTransportSet = ConnectivityManager.setProcessDefaultNetwork(network)
                     } else {
-                        connectivityManager.bindProcessToNetwork(network)
+                        preferredTransportSet = connectivityManager.bindProcessToNetwork(network)
                     }
                 } catch (e: IllegalStateException) {
                     Log.e(TAG, "ConnectivityManager.NetworkCallback.onAvailable: ", e)
@@ -83,37 +104,35 @@ internal class Client(applicationContext: Context) {
                 super.onUnavailable()
                 Log.d(TAG, "onUnavailable")
             }
-        })
+        }
+        return preferredTransportSet
     }
 
-    /**
-     * Request the @param url on the mobile device over the mobile data connection.
-     *
-     * @return The response as a string. By default, the response bytes are decoded as UTF-8.
-     *
-     * @throws IOException if the request could not be executed due to cancellation, a connectivity
-     *     problem or timeout. Because networks can fail during an exchange, it is possible that the
-     *     remote server accepted the request before the failure.
-     * @throws IllegalStateException when the call has already been executed.
-     */
-    @Throws(java.io.IOException::class)
-    fun requestSync(@NonNull url: String, @NonNull method: String, @Nullable body: RequestBody? = null): String {
+    private fun executeRequest(@NonNull url: String, @NonNull method: String, @Nullable body: RequestBody? = null): String{
+        var rawResponse = ""
         val request = Request.Builder()
             .method(method, body)
             .url(url)
-            .addHeader(HEADER_USER_AGENT,SDK_USER_AGENT + "/"+ BuildConfig.VERSION_NAME + " "
-                       + "Android" + "/" + Build.VERSION.RELEASE)
+            .addHeader(HEADER_USER_AGENT,
+                SDK_USER_AGENT + "/" + BuildConfig.VERSION_NAME + " " +
+                       "Android" + "/" + Build.VERSION.RELEASE)
             .build()
+
 
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IOException("Unexpected code $response")
 
-            val rawResponse = response.body!!.string()
-            Log.d(TAG, "Response to $url")
-            Log.d(TAG, rawResponse)
-            return rawResponse
+            response.body?.let {
+                rawResponse = it.string()
+
+                Log.d(TAG, "Response to $url")
+                Log.d(TAG, rawResponse)
+            }
         }
+
+        return rawResponse
     }
+
     companion object {
         private const val TAG = "Client"
         private const val HEADER_USER_AGENT = "User-Agent"
