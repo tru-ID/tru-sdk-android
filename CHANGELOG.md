@@ -8,8 +8,14 @@ Change Log
 
 _TBA_
 
+**New**
+Method `getJsonResponse` executes a GET request and returns the JSONObject response.
+Method `getJsonPropertyValue` executes a GET request and returns the value maped by a specific key.
+
 **Changes**
 Method `openCheckUrl` now returns Void.
+Method `openCheckUrl` now specifies a HTTP USER-AGENT.
+
 
 ## Version 0.0.1
 

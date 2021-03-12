@@ -37,6 +37,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okio.IOException
+import org.json.JSONException
+import org.json.JSONObject
 
 
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
@@ -51,30 +53,39 @@ internal class Client(applicationContext: Context) {
      * Request the @param url on the mobile device over the mobile data connection.
      * Unless otherwise specified, response bytes are decoded as UTF-8.
      *
+     * @return Optional JSONObject if the response contains a body.
+     *
      * @throws IOException if the request could not be executed due to cancellation, a connectivity
      *     problem or timeout. Because networks can fail during an exchange, it is possible that the
      *     remote server accepted the request before the failure.
      * @throws IllegalStateException when the call has already been executed.
      */
     @Throws(java.io.IOException::class)
-    fun requestSync(@NonNull url: String, @NonNull method: String, @Nullable body: RequestBody? = null) {
+    fun requestSync(@NonNull url: String, @NonNull method: String, @Nullable body: RequestBody? = null): JSONObject? {
 
         val capabilities = intArrayOf(NetworkCapabilities.NET_CAPABILITY_INTERNET)
         val transportTypes = intArrayOf(NetworkCapabilities.TRANSPORT_CELLULAR)
 
         alwaysPreferNetworksWith(capabilities, transportTypes)
 
-        executeRequest(url, method, body)
+        val response = executeRequest(url, method, body)
 
         // Release the request when done.
         networkCallback?.let { connectivityManager.unregisterNetworkCallback(it) }
+
+        response?.let{
+            try {
+                return JSONObject(it)
+            } catch (e: JSONException) {}
+        }
+
+        return null
     }
 
     private fun alwaysPreferNetworksWith(
         capabilities: IntArray,
         transportTypes: IntArray
-    ): Boolean {
-        var preferredTransportSet = false
+    ) {
         val request = NetworkRequest.Builder()
 
         for (capability in capabilities) {
@@ -88,28 +99,33 @@ internal class Client(applicationContext: Context) {
             override fun onAvailable(network: Network) {
                 try {
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                        preferredTransportSet = ConnectivityManager.setProcessDefaultNetwork(network)
+                        ConnectivityManager.setProcessDefaultNetwork(network)
                     } else {
-                        preferredTransportSet = connectivityManager.bindProcessToNetwork(network)
+                        connectivityManager.bindProcessToNetwork(network)
                     }
                 } catch (e: IllegalStateException) {
-                    Log.e(TAG, "ConnectivityManager.NetworkCallback.onAvailable: ", e)
+                    if (BuildConfig.DEBUG) {
+                        Log.e(TAG, "ConnectivityManager.NetworkCallback.onAvailable: ", e)
+                    }
                 }
             }
             override fun onLost(network: Network) {
                 super.onLost(network)
-                Log.d(TAG, "onLost: $network")
+                if (BuildConfig.DEBUG) {
+                    Log.w(TAG, "onLost: $network")
+                }
             }
             override fun onUnavailable() {
                 super.onUnavailable()
-                Log.d(TAG, "onUnavailable")
+                if (BuildConfig.DEBUG) {
+                    Log.w(TAG, "onUnavailable")
+                }
             }
         }
-        return preferredTransportSet
+        connectivityManager.registerNetworkCallback(request.build(), networkCallback as ConnectivityManager.NetworkCallback)
     }
 
-    private fun executeRequest(@NonNull url: String, @NonNull method: String, @Nullable body: RequestBody? = null): String{
-        var rawResponse = ""
+    private fun executeRequest(@NonNull url: String, @NonNull method: String, @Nullable body: RequestBody? = null): String? {
         val request = Request.Builder()
             .method(method, body)
             .url(url)
@@ -118,19 +134,11 @@ internal class Client(applicationContext: Context) {
                        "Android" + "/" + Build.VERSION.RELEASE)
             .build()
 
-
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IOException("Unexpected code $response")
 
-            response.body?.let {
-                rawResponse = it.string()
-
-                Log.d(TAG, "Response to $url")
-                Log.d(TAG, rawResponse)
-            }
+            return response.body?.string()
         }
-
-        return rawResponse
     }
 
     companion object {

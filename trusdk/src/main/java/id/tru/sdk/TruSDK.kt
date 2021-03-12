@@ -28,6 +28,7 @@ import android.util.Log
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
 import id.tru.sdk.network.Client
+import org.json.JSONObject
 import java.io.IOException
 
 /**
@@ -67,9 +68,42 @@ class TruSDK private constructor(context: Context) {
     @Throws(java.io.IOException::class)
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     fun openCheckUrl(@NonNull checkUrl: String) {
+        if (BuildConfig.DEBUG) {
+            Log.i(TAG, "Triggering check url")
+        }
+        client.requestSync(url = checkUrl, method = "GET")
+    }
 
-        Log.i(TAG, "Triggering check url")
-        client.requestSync(checkUrl, method = "GET")
+    /**
+     * Execute a network call to a specified [endpoint].
+     * Invokes the GET request immediately, and blocks until the response can be processed or is in error.
+     *
+     * Example usage: Read the IP address of the device over the mobile connection, in order to determine
+     * if tru.ID has reachability for the network.
+     *
+     * @WorkerThread
+     * @return The response as a JSONObject, or null if response cannot be processed.
+     */
+    fun getJsonResponse(@NonNull endpoint: String): JSONObject? {
+        Log.d(TAG, "getJsonResponse for endpoint:$endpoint")
+        return client.requestSync(url = endpoint, method = "GET")
+    }
+
+    /**
+     * Execute a network call to a specified [endpoint].
+     * Invokes the GET request immediately, and blocks until the response can be processed or is in error.
+     *
+     * Example usage: Read the IP address of the device over the mobile connection, in order to determine
+     * if tru.ID has reachability for the network.
+     *
+     * @WorkerThread
+     * @return The value mapped by [key] if it exists, coercing it if necessary, or the empty string
+     * if no such mapping exists.
+     */
+    fun getJsonPropertyValue(@NonNull endpoint: String, @NonNull key: String) : String? {
+        Log.d(TAG, "getJsonPropertyValue for endpoint:$endpoint key:$key")
+        val jsonResponse = getJsonResponse(endpoint)
+        return jsonResponse?.optString(key)
     }
 
     companion object {
