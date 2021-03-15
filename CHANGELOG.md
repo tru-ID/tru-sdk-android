@@ -6,7 +6,7 @@ Change Log
 
 ## Version 0.0.2
 
-_TBA_
+_2021-03-15_
 
 **New**
 Method `getJsonResponse` executes a GET request and returns the JSONObject response.

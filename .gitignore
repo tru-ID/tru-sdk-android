@@ -47,3 +47,5 @@ buck-out/
 .project
 .settings/
 .vscode/
+
+.env
