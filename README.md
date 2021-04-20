@@ -43,7 +43,7 @@ Make sure the env var `ANDROID_SDK_ROOT` is defined (i.e `export ANDROID_SDK_ROO
 
 Build the AAR
 ```
- ./gradlew assemble
+./gradlew assemble
 ```
 
 Publish to Package Repository (Internal Use Only)
@@ -55,7 +55,7 @@ Add the newly created token to the env var `TRU_SDK_ANDROID_TOKEN`
 Update semver in build.gradle
 
 ```
- ./gradlew publish
+./gradlew publish
 ```
 
 Meta

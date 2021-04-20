@@ -66,7 +66,6 @@ class TruSDK private constructor(context: Context) {
      * @throws IllegalStateException when the call has already been executed.
      */
     @Throws(java.io.IOException::class)
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     fun openCheckUrl(@NonNull checkUrl: String) {
         if (BuildConfig.DEBUG) {
             Log.i(TAG, "Triggering check url")
@@ -82,8 +81,13 @@ class TruSDK private constructor(context: Context) {
      * if tru.ID has reachability for the network.
      *
      * @WorkerThread
+     * @throws IOException if the request could not be executed due to cancellation, a connectivity
+     *     problem or timeout. Because networks can fail during an exchange, it is possible that the
+     *     remote server accepted the request before the failure.
+     * @throws IllegalStateException when the call has already been executed.
      * @return The response as a JSONObject, or null if response cannot be processed.
      */
+    @Throws(java.io.IOException::class)
     fun getJsonResponse(@NonNull endpoint: String): JSONObject? {
         Log.d(TAG, "getJsonResponse for endpoint:$endpoint")
         return client.requestSync(url = endpoint, method = "GET")
@@ -97,9 +101,14 @@ class TruSDK private constructor(context: Context) {
      * if tru.ID has reachability for the network.
      *
      * @WorkerThread
+     * @throws IOException if the request could not be executed due to cancellation, a connectivity
+     *     problem or timeout. Because networks can fail during an exchange, it is possible that the
+     *     remote server accepted the request before the failure.
+     * @throws IllegalStateException when the call has already been executed.
      * @return The value mapped by [key] if it exists, coercing it if necessary, or the empty string
      * if no such mapping exists.
      */
+    @Throws(java.io.IOException::class)
     fun getJsonPropertyValue(@NonNull endpoint: String, @NonNull key: String) : String? {
         Log.d(TAG, "getJsonPropertyValue for endpoint:$endpoint key:$key")
         val jsonResponse = getJsonResponse(endpoint)
