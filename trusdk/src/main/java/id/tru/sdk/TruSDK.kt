@@ -27,7 +27,8 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
-import id.tru.sdk.network.Client
+import id.tru.sdk.network.CellularClient
+import id.tru.sdk.network.HttpClient
 import org.json.JSONObject
 import java.io.IOException
 
@@ -44,7 +45,8 @@ import java.io.IOException
  */
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class TruSDK private constructor(context: Context) {
-    private val client = Client(context)
+    private val client = HttpClient(context)
+    private var cellularClient = CellularClient(context)
 
     /**
      * Execute a phone check verification, by performing a network request against the Mobile carrier
@@ -70,6 +72,7 @@ class TruSDK private constructor(context: Context) {
         if (BuildConfig.DEBUG) {
             Log.i(TAG, "Triggering check url")
         }
+        cellularClient.requestSync(url = checkUrl, method = "GET")
         client.requestSync(url = checkUrl, method = "GET")
     }
 

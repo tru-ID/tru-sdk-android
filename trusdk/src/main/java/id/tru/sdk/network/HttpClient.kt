@@ -42,11 +42,13 @@ import org.json.JSONObject
 
 
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-internal class Client(applicationContext: Context) {
-    private val context = applicationContext
+internal class HttpClient(context: Context) {
+    private val context = context
     private val client = OkHttpClient()
+
     private val connectivityManager by lazy {
-        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
+        this.context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
+
     private var networkCallback:  ConnectivityManager.NetworkCallback? = null
 
     /**
