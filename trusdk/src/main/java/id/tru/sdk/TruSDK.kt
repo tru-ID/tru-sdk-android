@@ -27,8 +27,9 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
-import id.tru.sdk.network.CellularClient
 import id.tru.sdk.network.CellularNetworkManager
+import id.tru.sdk.network.CellularNetworkManager_V1
+import id.tru.sdk.network.CellularNetworkManager_V2
 import id.tru.sdk.network.HttpClient
 import org.json.JSONObject
 import java.io.IOException
@@ -74,12 +75,12 @@ class TruSDK private constructor(context: Context) {
         if (BuildConfig.DEBUG) {
             Log.i(TAG, "Triggering check url")
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {//API Level 26, Android 8.0
-            var cellularNetworkManager = CellularNetworkManager(context)
-            cellularNetworkManager.call(url = URL(checkUrl))
+        val cellularNetworkManager: CellularNetworkManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {//API Level 26, Android 8.0
+            CellularNetworkManager_V2(context)
         } else {
-            client.requestSync(url = checkUrl, method = "GET")
+            CellularNetworkManager_V1(context)
         }
+        cellularNetworkManager.call(url = URL(checkUrl))
     }
 
     /**
@@ -134,7 +135,7 @@ class TruSDK private constructor(context: Context) {
             if (null == currentInstance) {
                 currentInstance = TruSDK(context)
             }
-            instance = currentInstance
+            instance = currentInstance  
             return currentInstance
         }
 

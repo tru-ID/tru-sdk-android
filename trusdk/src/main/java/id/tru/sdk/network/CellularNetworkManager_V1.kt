@@ -16,8 +16,7 @@ import org.json.JSONObject
 import java.net.URL
 
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-@Deprecated("This class will be reviewed")
-internal class CellularClient(context: Context) {
+internal class CellularNetworkManager_V1(context: Context): CellularNetworkManager {
     private val context = context
 
     private val connectivityManager by lazy {
@@ -28,9 +27,6 @@ internal class CellularClient(context: Context) {
 
     /**
      * Request the @param url on the mobile device over the mobile data connection.
-     * Unless otherwise specified, response bytes are decoded as UTF-8.
-     *
-     * @return Optional JSONObject if the response contains a body.
      *
      * @throws IOException if the request could not be executed due to cancellation, a connectivity
      *     problem or timeout. Because networks can fail during an exchange, it is possible that the
@@ -38,8 +34,7 @@ internal class CellularClient(context: Context) {
      * @throws IllegalStateException when the call has already been executed.
      */
     @Throws(java.io.IOException::class)
-    fun requestSync(@NonNull url: String, @NonNull method: String, @Nullable body: RequestBody? = null): JSONObject? {
-        Log.d(TAG, "Hello from openCheckURL")
+    override fun call(@NonNull url: URL) {
         Log.d(TAG, "Triggering open check url")
 
         val capabilities = intArrayOf(NetworkCapabilities.NET_CAPABILITY_INTERNET)
@@ -48,11 +43,9 @@ internal class CellularClient(context: Context) {
         configureNetworkWithPreferred(capabilities, transportTypes)
 
         var cs = ClientSocket()
-        cs.check(URL(url))
+        cs.check(url)
         // Release the request when done.
         networkCallback?.let { connectivityManager.unregisterNetworkCallback(it) }
-
-        return null
     }
 
     private fun configureNetworkWithPreferred(capabilities: IntArray, transportTypes: IntArray) {
@@ -92,11 +85,12 @@ internal class CellularClient(context: Context) {
                 }
             }
         }
+
         connectivityManager.registerNetworkCallback(request.build(), networkCallback as ConnectivityManager.NetworkCallback)
     }
 
     companion object {
-        private const val TAG = "CellularClient"
+        private const val TAG = "CellularNM_V1"
     }
 
 }
