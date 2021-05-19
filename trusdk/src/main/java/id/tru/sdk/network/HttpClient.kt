@@ -40,8 +40,7 @@ import okio.IOException
 import org.json.JSONException
 import org.json.JSONObject
 
-
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+@RequiresApi(Build.VERSION_CODES.LOLLIPOP) //API level 21, Lollipop 5.0, 92% coverage
 internal class HttpClient(context: Context) {
     private val context = context
     private val client = OkHttpClient()
@@ -84,10 +83,7 @@ internal class HttpClient(context: Context) {
         return null
     }
 
-    private fun alwaysPreferNetworksWith(
-        capabilities: IntArray,
-        transportTypes: IntArray
-    ) {
+    private fun alwaysPreferNetworksWith(capabilities: IntArray, transportTypes: IntArray) {
         val request = NetworkRequest.Builder()
 
         for (capability in capabilities) {
