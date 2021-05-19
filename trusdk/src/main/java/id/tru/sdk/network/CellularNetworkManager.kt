@@ -31,7 +31,7 @@ internal class CellularNetworkManager constructor(context: Context)  {
 
     private val cellularInfo by lazy {
         val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        CelularInfo(telephonyManager)
+        CellularInfo(telephonyManager)
     }
 
     fun call(url: URL) {
