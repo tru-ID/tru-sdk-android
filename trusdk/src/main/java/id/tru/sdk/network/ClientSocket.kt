@@ -1,6 +1,5 @@
 package id.tru.sdk.network
 
-import android.net.Network
 import android.os.Build
 import androidx.annotation.RequiresApi
 import java.io.BufferedReader
@@ -9,47 +8,33 @@ import java.io.OutputStream
 import java.net.Socket
 import java.net.URL
 import java.nio.charset.Charset
-import java.time.Instant
-import java.time.format.DateTimeFormatter
+import java.nio.charset.StandardCharsets
 import javax.net.ssl.SSLSocketFactory
+import android.util.Log
 
-@RequiresApi(Build.VERSION_CODES.O)
+@RequiresApi(Build.VERSION_CODES.LOLLIPOP) //API Level 21
 class ClientSocket {
-    lateinit var client: Socket
-    lateinit var output: OutputStream
-    lateinit var input: BufferedReader
-    private var trace = StringBuilder()
-    private var traceOn = false
+    private lateinit var socket: Socket
+    private lateinit var output: OutputStream
+    private lateinit var input: BufferedReader
 
-    fun startTrace() {
-        trace.clear()
-        traceOn = true
-    }
-
-    fun stopTrace() {
-        traceOn = false
-        trace.clear()
-    }
-
-    fun getTrace(): String {
-        return trace.toString()
-    }
-
-    fun addTrace(log: String) {
-        if (traceOn) trace.append(log + "\n")
-    }
-
+    /**
+     * Sends an HTTP(S) request over a Socket, and follows redirects up to MAX_REDIRECT_COUNT.
+     */
     fun check(url: URL) {
-        startConnection(url)
-        var r = sendCommand(url)
-        stopConnection()
-        if (r!=null)
-            check(URL(r))
+        var redirectURL: URL? = null
+        var redirectCount = 0
+        do {
+            redirectCount += 1
+            startConnection(redirectURL ?: url)
+            redirectURL = sendCommand(url)
+            stopConnection()
+        } while (redirectURL != null && redirectCount <= MAX_REDIRECT_COUNT)
     }
 
-    fun sendCommand(url: URL): String? {
-        var CRLF = "\r\n"
-        var cmd = StringBuffer()
+    private fun makeHTTPCommand(url: URL): String {
+        val CRLF = "\r\n"
+        val cmd = StringBuffer()
         cmd.append("GET "+url.path)
         if (url.query!=null) {
             cmd.append("?"+url.query)
@@ -59,71 +44,81 @@ class ClientSocket {
         cmd.append("User-Agent: tru-sdk-android/wip$CRLF")
         cmd.append("Accept: */*$CRLF")
         cmd.append("Connection: close$CRLF$CRLF")
-        return sendMessage(cmd.toString())
+        return cmd.toString()
     }
 
-    fun startConnection(url: URL) {
-        var port = 80
-        println("start : ${url.host} ${url.protocol}")
-        addTrace("\nStart connection ${url.host} ${url.protocol} ${DateTimeFormatter.ISO_INSTANT.format(Instant.now()).toString()}\n")
-        if (url.protocol == "https") {
-            port = 443;
-            client = SSLSocketFactory.getDefault().createSocket(url.host, port)
-        } else
-            client = Socket(url.host, port)
-        output = client.getOutputStream()
-        input = BufferedReader(InputStreamReader(client.inputStream))
-        println("Client connected : ${client.inetAddress.hostAddress} ${client.port} ${DateTimeFormatter.ISO_INSTANT.format(Instant.now()).toString()}")
-        addTrace("Connected ${DateTimeFormatter.ISO_INSTANT.format(Instant.now()).toString()}\n")
-
+    private fun sendCommand(url: URL): URL? {
+        val command = makeHTTPCommand(url)
+        return sendRequest(command)
     }
 
-    fun sendMessage(message: String): String? {
-        println("Client sending \n$message\n")
-        addTrace(message)
-        val bytesOfRequest: ByteArray = message.toByteArray(Charset.forName("UTF-8)"))
+    private fun startConnection(url: URL) {
+        Log.d(TAG, "start : ${url.host} ${url.protocol}")
+
+        socket = if (url.protocol == "https") {
+            SSLSocketFactory.getDefault().createSocket(url.host, 443)
+        } else {
+            Socket(url.host, 80)
+        }
+
+        output = socket.getOutputStream()
+        input = BufferedReader(InputStreamReader(socket.inputStream))
+
+        Log.d(TAG, "Client connected : ${socket.inetAddress.hostAddress} ${socket.port}")
+    }
+
+    private fun sendRequest(message: String): URL? {
+        Log.d(TAG, "Client sending \n$message\n")
+
+        val bytesOfRequest: ByteArray = message.toByteArray(Charset.forName(StandardCharsets.UTF_8.name()))
         output.write(bytesOfRequest)
-        println("Response\n")
-        addTrace("Response - " + DateTimeFormatter.ISO_INSTANT.format(Instant.now()).toString() +"\n")
-        while (true) {
-            var str = input.readLine();
-            if (str !=null) {
-                println(str)
-                addTrace(str)
-                if (str.startsWith("HTTP/")) {
-                    var parts = str.split(" ")
-                    if (!parts.isEmpty() && parts.size>=2) {
-                        var status = Integer.valueOf(parts[1])
-                        println("status: ${status}\n")
+        output.flush()
+
+        Log.d(TAG, "Response " +"\n")
+
+        while (socket.isConnected) {
+            var line = input.readLine();
+            if (line != null) {
+                Log.d(TAG, line)
+                if (line.startsWith("HTTP/")) {
+                    val parts = line.split(" ")
+                    if (!parts.isEmpty() && parts.size >= 2) {
+                        val status = Integer.valueOf(parts[1])
+                        Log.d(TAG, "status: ${status}\n")
                         /*if (status == 200) {
                             continue
                         } else*/ if ( status <300 || status > 310) {
-                            addTrace("Status - ${status} ${DateTimeFormatter.ISO_INSTANT.format(Instant.now()).toString()}\n")
+                            Log.d(TAG, "Status - ${status}")
                             break
                         }
                     }
-                } else if (str.contains("ocation:")) {
-                    var parts = str.split(" ")
-                    if (!parts.isEmpty() && parts.size==2) {
+                } else if (line.contains("ocation:")) {
+                    var parts = line.split(" ")
+                    if (parts.isNotEmpty() && parts.size==2) {
                         var redirect = parts[1]
-                        println("redirect: ${redirect}\n")
-                        addTrace("Found redirect - " + DateTimeFormatter.ISO_INSTANT.format(Instant.now()).toString() +"\n")
-                        return redirect;
+                        Log.d(TAG, "Found redirect")
+                        return URL(redirect);
                     }
                 }
             } else {
-                print("fuck off "+DateTimeFormatter.ISO_INSTANT.format(Instant.now()).toString())
+                Log.e(TAG, "Error reading the response.")
                 break
             }
         }
         return null
     }
 
-    fun stopConnection() {
-        client.close()
+    private fun stopConnection() {
         input.close()
         output.close()
-        println("${client.inetAddress.hostAddress} closed the connection")
+        socket.close()
+        Log.d(TAG, "${socket.inetAddress.hostAddress} closed the connection")
     }
 
+    companion object {
+        private const val TAG = "CellularClient"
+        private const val HEADER_USER_AGENT = "User-Agent"
+        private const val SDK_USER_AGENT = "tru-sdk-android"
+        private const val MAX_REDIRECT_COUNT = 10
+    }
 }
