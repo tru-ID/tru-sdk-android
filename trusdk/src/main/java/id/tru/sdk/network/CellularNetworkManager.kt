@@ -14,7 +14,7 @@ import java.net.URL
 /**
  * SDK at the moment support API level 21, Lollipop 5.0, 92% coverage
  * TEST CASES to handle:
- * 1) Mobile Data / Roaming disabled, Wifi avaialble or not
+ * 1) Mobile Data / Roaming disabled, Wifi available or not
  * 2) Airplane mode
  * 3) Don't Disturb
  * 4) Restricting apps to only use WiFi
@@ -44,16 +44,12 @@ internal class CellularNetworkManager constructor(context: Context)  {
         */
         forceCellular {
             if (it) {
-                var isAvailable = isCellularAvailable()
-                Log.d(TAG,"-> Async Network: After forcing isAvailable? $isAvailable")
-                var isBound = isCellularBoundToProcess()
-                Log.d(TAG,"-> Async Network: After forcing isBound? $isBound")
+                Log.d(TAG,"-> After forcing isAvailable? ${isCellularAvailable()}")
+                Log.d(TAG,"-> After forcing isBound? ${isCellularBoundToProcess()}")
                 // We have Mobile Data registered and bound for use
-                // However, user may still have not data plan!
-                //Sockets
+                // However, user may still have no data plan!
                 var cs = ClientSocket()
                 cs.check(url)
-                unregisterCellularNetworkListener()
                 checkNetworks()
             } else {
                 Log.d(TAG,"We do not have a path")
@@ -68,8 +64,8 @@ internal class CellularNetworkManager constructor(context: Context)  {
      * some Android devices may not show it on the available networks list. They tend to set WiFi
      * as the default and active network. This method requests the mobile data network to be
      * available, and when available it bind the network to the process to be used later.
-     *
      */
+    @Synchronized
     private fun forceCellular(onCompletion: (isSucess: Boolean) -> Unit) {
         Log.d(TAG, "------ Forcing Cellular ------")
         Log.d(TAG,"Checking if Mobile Data is enabled..")
@@ -96,15 +92,12 @@ internal class CellularNetworkManager constructor(context: Context)  {
                         // (and not explicitly bound via a bound SocketFactory from {@link Network#getSocketFactory() Network.getSocketFactory()})
                         // will be bound to network.
                         Log.d(TAG, "  Binding to process:")
-                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {//23 Android 6.0 Marsh
-                            ConnectivityManager.setProcessDefaultNetwork(network)
-                        } else {
-                            connectivityManager.bindProcessToNetwork(network) //API Level 23
-                            //OR you can bind the socket to the Network
-                            //network.bindSocket()
-                        }
-                        Log.d(TAG,"Binding finihsed. Is Main thread? ${isMainThread()}")
-                        onCompletion(true)
+                        connectivityManager.bindProcessToNetwork(network) //API Level 23, 6.0 Marsh
+                        //OR you can bind the socket to the Network
+                        //network.bindSocket()
+                        Log.d(TAG,"Binding finished. Is Main thread? ${isMainThread()}")
+                        onCompletion(true) //Network request needs to be done in this lambda
+                        unregisterCellularNetworkListener()
                     } catch (e: IllegalStateException) {
                         Log.d(TAG, "ConnectivityManager.NetworkCallback.onAvailable: $e")
                     }
@@ -131,18 +124,15 @@ internal class CellularNetworkManager constructor(context: Context)  {
             request.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             request.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
 
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {//API Level 26
-                //The network request will live, until unregisterNetworkCallback is called or app exit.
-                connectivityManager.requestNetwork(request.build(),
-                    cellularNetworkCallBack as ConnectivityManager.NetworkCallback, 5000
-                )
-            }
+            //The network request will live, until unregisterNetworkCallback is called or app exit.
+            connectivityManager.requestNetwork(request.build(),
+                cellularNetworkCallBack as ConnectivityManager.NetworkCallback, 5000
+            )
 
             Log.d(TAG, "Forcing Cellular - Requesting to registered...")
         } else {
-            Log.d(TAG, "There is already a Listener registered.")
             //Perhaps there is already one registered, and in progress or waiting to be timed out
+            Log.d(TAG, "There is already a Listener registered.")
         }
 
     }
