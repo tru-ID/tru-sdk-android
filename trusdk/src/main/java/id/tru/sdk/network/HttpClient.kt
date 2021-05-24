@@ -40,6 +40,7 @@ import okio.IOException
 import org.json.JSONException
 import org.json.JSONObject
 
+
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP) //API level 21, Lollipop 5.0, 92% coverage
 internal class HttpClient(context: Context) {
     private val context = context
@@ -129,7 +130,7 @@ internal class HttpClient(context: Context) {
             .url(url)
             .addHeader(HEADER_USER_AGENT,
                 SDK_USER_AGENT + "/" + BuildConfig.VERSION_NAME + " " +
-                       "Android" + "/" + Build.VERSION.RELEASE)
+                        "Android" + "/" + Build.VERSION.RELEASE)
             .build()
 
         client.newCall(request).execute().use { response ->

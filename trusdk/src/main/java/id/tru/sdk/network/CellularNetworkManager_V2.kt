@@ -11,6 +11,8 @@ import android.util.Log
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
 import java.net.URL
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * CellularNetworkManager requests Cellular Network from the system to be available to
@@ -25,7 +27,7 @@ import java.net.URL
  * 2) Airplane mode
  * 3) Don't Disturb
  * 4) Restricting apps to only use WiFi
-*/
+ */
 @RequiresApi(Build.VERSION_CODES.O) // API Level 26, Oreo, Android 8.0 (61%) coverage
 internal class CellularNetworkManager_V2 constructor(context: Context): CellularNetworkManager  {
 
@@ -43,13 +45,15 @@ internal class CellularNetworkManager_V2 constructor(context: Context): Cellular
 
     /**
      * Request the @param url on the mobile device over the mobile data connection.
-     *
-     * @throws IOException if the request could not be executed due to cancellation, a connectivity
-     *     problem or timeout.
+     * @param url to be requested
+     * @return A true if the request was successfully made on a cellular network, otherwise false
      */
-    @Throws(java.io.IOException::class)
-    override fun call(@NonNull url: URL) {
+    override fun call(@NonNull url: URL): Boolean {
+        var calledOnCellularNetwork = false
         checkNetworks()
+        val lock = ReentrantLock()
+        val condition = lock.newCondition()
+
         /* Whether Cellular Network is Active Network OR (Available and Bound to the process)
         * isCellularActiveNetwork() || (isCellularAvailable() && isCellularBoundToProcess())
         * OR NOT
@@ -58,6 +62,7 @@ internal class CellularNetworkManager_V2 constructor(context: Context): Cellular
         */
         forceCellular {
             if (it) {
+                calledOnCellularNetwork = true
                 Log.d(TAG,"-> After forcing isAvailable? ${isCellularAvailable()}")
                 Log.d(TAG,"-> After forcing isBound? ${isCellularBoundToProcess()}")
                 // We have Mobile Data registered and bound for use
@@ -65,10 +70,17 @@ internal class CellularNetworkManager_V2 constructor(context: Context): Cellular
                 var cs = ClientSocket()
                 cs.check(url)
                 checkNetworks()
+                lock.withLock {
+                    condition.signal()
+                }
             } else {
                 Log.d(TAG,"We do not have a path")
             }
         }
+        lock.withLock {
+            condition.await()
+        }
+        return calledOnCellularNetwork
     }
 
     private fun isDataEnabled():Boolean { return cellularInfo.isDataEnabled() }
@@ -85,7 +97,7 @@ internal class CellularNetworkManager_V2 constructor(context: Context): Cellular
         Log.d(TAG,"Checking if Mobile Data is enabled..")
 
         if (!isDataEnabled()) {
-            Log.d(TAG,"-> Mobile Data is NOT enabled, we can not force cellular!")
+            Log.d(TAG,"Mobile Data is NOT enabled, we can not force cellular!")
             Thread(Runnable {
                 Log.d(TAG,"Calling completion -- Is Main thread? ${isMainThread()}")
                 onCompletion(false)
@@ -109,11 +121,11 @@ internal class CellularNetworkManager_V2 constructor(context: Context): Cellular
                         connectivityManager.bindProcessToNetwork(network) //API Level 23, 6.0 Marsh
                         //OR you can bind the socket to the Network
                         //network.bindSocket()
-                        Log.d(TAG,"Binding finished. Is Main thread? ${isMainThread()}")
+                        Log.d(TAG,"  Binding finished. Is Main thread? ${isMainThread()}")
                         onCompletion(true) //Network request needs to be done in this lambda
                         unregisterCellularNetworkListener()
                     } catch (e: IllegalStateException) {
-                        Log.d(TAG, "ConnectivityManager.NetworkCallback.onAvailable: $e")
+                        Log.d(TAG, "  ConnectivityManager.NetworkCallback.onAvailable: $e")
                     }
                 }
 
@@ -304,7 +316,7 @@ internal class CellularNetworkManager_V2 constructor(context: Context): Cellular
         defaultNetworkCallBack?.let { connectivityManager.registerDefaultNetworkCallback(it) }
     }
 
-    fun unregisterDefaultNetworkListener() {
+    private fun unregisterDefaultNetworkListener() {
         defaultNetworkCallBack?.let { connectivityManager.unregisterNetworkCallback(it) }
     }
 

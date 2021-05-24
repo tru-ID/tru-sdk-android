@@ -11,9 +11,10 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import javax.net.ssl.SSLSocketFactory
 import android.util.Log
+import id.tru.sdk.BuildConfig
 
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP) //API Level 21
-class ClientSocket {
+internal class ClientSocket {
     private lateinit var socket: Socket
     private lateinit var output: OutputStream
     private lateinit var input: BufferedReader
@@ -26,10 +27,13 @@ class ClientSocket {
         var redirectCount = 0
         do {
             redirectCount += 1
-            startConnection(redirectURL ?: url)
-            redirectURL = sendCommand(url)
+            val nurl = redirectURL ?: url
+            Log.d(TAG, "Requesting: $nurl")
+            startConnection(nurl)
+            redirectURL = sendCommand(nurl)
             stopConnection()
         } while (redirectURL != null && redirectCount <= MAX_REDIRECT_COUNT)
+        Log.d(TAG, "Check complete")
     }
 
     private fun makeHTTPCommand(url: URL): String {
@@ -41,7 +45,8 @@ class ClientSocket {
         }
         cmd.append(" HTTP/1.1$CRLF")
         cmd.append("Host: "+ url.host+CRLF)
-        cmd.append("User-Agent: tru-sdk-android/wip$CRLF")
+        val userAgent = SDK_USER_AGENT + "/" + BuildConfig.VERSION_NAME + " " + "Android" + "/" + Build.VERSION.RELEASE
+        cmd.append("User-Agent: $userAgent$CRLF")
         cmd.append("Accept: */*$CRLF")
         cmd.append("Connection: close$CRLF$CRLF")
         return cmd.toString()
@@ -109,10 +114,14 @@ class ClientSocket {
     }
 
     private fun stopConnection() {
-        input.close()
-        output.close()
-        socket.close()
-        Log.d(TAG, "${socket.inetAddress.hostAddress} closed the connection")
+        Log.d(TAG, "closed the connection ${socket.inetAddress.hostAddress}")
+        try {
+            input.close()
+            output.close()
+            socket.close()
+        } catch (e: Throwable) {
+            Log.e(TAG, "Exception received whilst closing the socket ${e.localizedMessage}")
+        }
     }
 
     companion object {

@@ -4,8 +4,8 @@ import android.os.Build
 import android.telephony.TelephonyManager
 import androidx.annotation.RequiresApi
 
-@RequiresApi(Build.VERSION_CODES.O) // API Level 26, Oreo, Android 8.0 (61%) coverage
-class CellularInfo constructor(telephone: TelephonyManager) {
+@RequiresApi(Build.VERSION_CODES.O) // API Level 26, Oreo, Android 8.0
+internal class CellularInfo constructor(telephone: TelephonyManager) {
     private val telephone = telephone
 
     fun isDataEnabled():Boolean { return telephone.isDataEnabled }
