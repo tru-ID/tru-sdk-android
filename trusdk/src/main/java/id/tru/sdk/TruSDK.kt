@@ -69,7 +69,7 @@ class TruSDK private constructor(context: Context) {
      *     problem or timeout. Because networks can fail during an exchange, it is possible that the
      *     remote server accepted the request before the failure.
      * @throws IllegalStateException when the call has already been executed.
-     * @return Indicating whether the request was made on a Cellular Network
+     * @return Indicating whether the request was made on a Cellular Network or not
      */
     @Throws(java.io.IOException::class)
     suspend fun openCheckUrl(@NonNull checkUrl: String): Boolean {
