@@ -41,12 +41,14 @@ import org.json.JSONException
 import org.json.JSONObject
 
 
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-internal class Client(applicationContext: Context) {
-    private val context = applicationContext
+@RequiresApi(Build.VERSION_CODES.LOLLIPOP) //API level 21, Lollipop 5.0, 92% coverage
+internal class HttpClient(context: Context) {
+    private val context = context
     private val client = OkHttpClient()
+
     private val connectivityManager by lazy {
-        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
+        this.context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
+
     private var networkCallback:  ConnectivityManager.NetworkCallback? = null
 
     /**
@@ -82,10 +84,7 @@ internal class Client(applicationContext: Context) {
         return null
     }
 
-    private fun alwaysPreferNetworksWith(
-        capabilities: IntArray,
-        transportTypes: IntArray
-    ) {
+    private fun alwaysPreferNetworksWith(capabilities: IntArray, transportTypes: IntArray) {
         val request = NetworkRequest.Builder()
 
         for (capability in capabilities) {
@@ -131,7 +130,7 @@ internal class Client(applicationContext: Context) {
             .url(url)
             .addHeader(HEADER_USER_AGENT,
                 SDK_USER_AGENT + "/" + BuildConfig.VERSION_NAME + " " +
-                       "Android" + "/" + Build.VERSION.RELEASE)
+                        "Android" + "/" + Build.VERSION.RELEASE)
             .build()
 
         client.newCall(request).execute().use { response ->

@@ -27,9 +27,13 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
-import id.tru.sdk.network.Client
+import id.tru.sdk.network.CellularNetworkManager
+import id.tru.sdk.network.CellularNetworkManager_V1
+import id.tru.sdk.network.CellularNetworkManager_V2
+import id.tru.sdk.network.HttpClient
 import org.json.JSONObject
 import java.io.IOException
+import java.net.URL
 
 /**
  * TruSDK main entry point.
@@ -44,7 +48,8 @@ import java.io.IOException
  */
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class TruSDK private constructor(context: Context) {
-    private val client = Client(context)
+    private val context = context
+    private val client = HttpClient(context)
 
     /**
      * Execute a phone check verification, by performing a network request against the Mobile carrier
@@ -64,13 +69,19 @@ class TruSDK private constructor(context: Context) {
      *     problem or timeout. Because networks can fail during an exchange, it is possible that the
      *     remote server accepted the request before the failure.
      * @throws IllegalStateException when the call has already been executed.
+     * @return Indicating whether the request was made on a Cellular Network
      */
     @Throws(java.io.IOException::class)
-    fun openCheckUrl(@NonNull checkUrl: String) {
-        if (BuildConfig.DEBUG) {
-            Log.i(TAG, "Triggering check url")
+    suspend fun openCheckUrl(@NonNull checkUrl: String): Boolean {
+        Log.d("TruSDK", "openCheckURL")
+        val cellularNetworkManager: CellularNetworkManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {//API Level 26, Android 8.0
+            //Ideal
+            CellularNetworkManager_V2(context)
+        } else {
+            //Best effort
+            CellularNetworkManager_V1(context)
         }
-        client.requestSync(url = checkUrl, method = "GET")
+        return cellularNetworkManager.call(url = URL(checkUrl))
     }
 
     /**
