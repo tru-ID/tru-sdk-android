@@ -3,6 +3,12 @@
 
 Change Log
 ==========
+## Version 0.1.0
+
+_2021-05-24_
+
+**Changes**
+- Method `openCheckUrl` can now make network call over cellular network without needing the user to change the network type. The method has a return type indicating whether the call was made on a cellular network or not
 
 ## Version 0.0.3
 
