@@ -61,20 +61,20 @@ internal class CellularNetworkManager_V2 constructor(context: Context): Cellular
         * it should be available. A further optimasation can be done perhaps, with helper check methods.
         */
         forceCellular {
-            if (it) {
-                calledOnCellularNetwork = true
-                Log.d(TAG,"-> After forcing isAvailable? ${isCellularAvailable()}")
-                Log.d(TAG,"-> After forcing isBound? ${isCellularBoundToProcess()}")
-                // We have Mobile Data registered and bound for use
-                // However, user may still have no data plan!
-                var cs = ClientSocket()
-                cs.check(url)
-                checkNetworks()
-                lock.withLock {
-                    condition.signal()
+            lock.withLock {
+                if (it) {
+                    calledOnCellularNetwork = true
+                    Log.d(TAG,"-> After forcing isAvailable? ${isCellularAvailable()}")
+                    Log.d(TAG,"-> After forcing isBound? ${isCellularBoundToProcess()}")
+                    // We have Mobile Data registered and bound for use
+                    // However, user may still have no data plan!
+                    var cs = ClientSocket()
+                    cs.check(url)
+                    checkNetworks()
+                } else {
+                    Log.d(TAG,"We do not have a path")
                 }
-            } else {
-                Log.d(TAG,"We do not have a path")
+                condition.signal()
             }
         }
         lock.withLock {

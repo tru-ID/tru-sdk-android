@@ -18,7 +18,7 @@ import kotlin.concurrent.schedule
 import kotlin.concurrent.withLock
 
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP) // API 21, Android 5.0
-internal class CellularNetworkManager_V1(context: Context): CellularNetworkManager {
+internal class CellularNetworkManager_V1(context: Context) : CellularNetworkManager {
     private val context = context
 
     private val connectivityManager by lazy {
@@ -27,10 +27,12 @@ internal class CellularNetworkManager_V1(context: Context): CellularNetworkManag
 
     private var timeoutTask: TimerTask? = null
 
-    private var networkCallback:  ConnectivityManager.NetworkCallback? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     /**
      * Request the @param url on the mobile device over the mobile data connection.
+     * @param url to be requested
+     * @return A true if the request was successfully made on a cellular network, otherwise false
      */
     override fun call(@NonNull url: URL): Boolean {
         var calledOnCellularNetwork = false
@@ -43,16 +45,16 @@ internal class CellularNetworkManager_V1(context: Context): CellularNetworkManag
 
         configureNetworkWithPreferred(capabilities, transportTypes) {
 
-            if (it) {
-                calledOnCellularNetwork = true
-            }
-            var cs = ClientSocket()
-            cs.check(url)
-            // Release the request when done.
-            networkCallback?.let {
-                connectivityManager.unregisterNetworkCallback(it)
-            }
             lock.withLock {
+                if (it) {
+                    calledOnCellularNetwork = true
+                }
+                var cs = ClientSocket()
+                cs.check(url)
+                // Release the request when done.
+                networkCallback?.let {
+                    connectivityManager.unregisterNetworkCallback(it)
+                }
                 condition.signal()
             }
         }
@@ -69,8 +71,10 @@ internal class CellularNetworkManager_V1(context: Context): CellularNetworkManag
      * 20 secs timeout applies if the network never registers, then the lambda is called with
      * a value of false.
      */
-    private fun configureNetworkWithPreferred(capabilities: IntArray,
-                                              transportTypes: IntArray, onCompletion: (isSucess: Boolean) -> Unit) {
+    private fun configureNetworkWithPreferred(
+        capabilities: IntArray,
+        transportTypes: IntArray, onCompletion: (isSucess: Boolean) -> Unit
+    ) {
         val request = NetworkRequest.Builder()
         //Just in case as per Documentation
         request.removeTransportType(NetworkCapabilities.TRANSPORT_WIFI)
@@ -83,7 +87,7 @@ internal class CellularNetworkManager_V1(context: Context): CellularNetworkManag
             request.addTransportType(transportType)
         }
 
-        networkCallback = object:  ConnectivityManager.NetworkCallback() {
+        networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 try {
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
@@ -120,11 +124,14 @@ internal class CellularNetworkManager_V1(context: Context): CellularNetworkManag
             Log.d(TAG, "Timeout...")
             Thread(Runnable { onCompletion(false) }).start()
         }
-        connectivityManager.registerNetworkCallback(request.build(), networkCallback as ConnectivityManager.NetworkCallback)
+        connectivityManager.registerNetworkCallback(
+            request.build(),
+            networkCallback as ConnectivityManager.NetworkCallback
+        )
     }
 
     private fun cancelTimeout() {
-        Log.d(TAG,"Cancelling timeout")
+        Log.d(TAG, "Cancelling timeout")
         timeoutTask?.let { it.cancel() }
     }
 
