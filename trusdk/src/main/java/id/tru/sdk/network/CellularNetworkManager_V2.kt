@@ -22,7 +22,7 @@ import kotlin.concurrent.withLock
  * make the cellular network visible to the process.
  *
  * SDK at the moment support API level 21, Lollipop 5.0, 92% coverage
- * TEST CASES to handle:
+ * The following test cases are handled:
  * 1) Mobile Data / Roaming disabled, Wifi available or not
  * 2) Airplane mode
  * 3) Don't Disturb
