@@ -16,7 +16,7 @@ https://gitlab.com/api/v4/projects/22035475/packages/maven
 build.gradle -> dependencies add
 
 ```
-    implementation 'id.tru.sdk:tru-sdk-android:0.1.0'
+    implementation 'id.tru.sdk:tru-sdk-android:0.2.0'
 ```
 
 Compatibility
@@ -31,8 +31,12 @@ Usage example
 ```
 import id.tru.sdk.TruSDK
 
-private val truSdk = TruSDK.getInstance()
-var isExecutedOnCellular = truSdk.openCheckUrl(checkUrl)
+TruSDK.initializeSdk(this.applicationContext)
+...
+val truSdk = TruSDK.getInstance()
+...
+val isExecutedOnCellular = truSdk.openCheckUrl(checkUrl)
+val reachabilityDetails = truSdk.getInstance().isReachable()
 ```
 
 
