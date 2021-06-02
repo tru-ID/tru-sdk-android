@@ -3,6 +3,16 @@
 
 Change Log
 ==========
+## Version 0.2.0
+_2021-06-02_
+
+**New**
+- Method `isReachable` executes a GET request to a Tru.Id endpoint and returns the `ReachabilityDetails` object. You can inspect this object to find out about the Mobile Carrier details if the request was made over cellular network. Note that the this method doesn't necessarily force Android system to use a mobile network.
+
+**Changes**
+- Method `getJsonPropertyValue` is deprecated.
+- Method `getJsonProperty` is deprecated.
+
 ## Version 0.1.0
 
 _2021-05-24_

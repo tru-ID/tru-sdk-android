@@ -20,7 +20,8 @@ internal class ClientSocket {
     private lateinit var input: BufferedReader
 
     /**
-     * Sends an HTTP(S) request over a Socket, and follows redirects up to MAX_REDIRECT_COUNT.
+     * To be used for phoneCheck.
+     * Sends an HTTP/HTTPS request over a Socket, and follows redirects up to MAX_REDIRECT_COUNT.
      */
     fun check(url: URL) {
         var redirectURL: URL? = null
@@ -39,14 +40,15 @@ internal class ClientSocket {
     private fun makeHTTPCommand(url: URL): String {
         val CRLF = "\r\n"
         val cmd = StringBuffer()
-        cmd.append("GET "+url.path)
-        if (url.query!=null) {
-            cmd.append("?"+url.query)
+        cmd.append("GET " + url.path)
+        if (url.query != null) {
+            cmd.append("?" + url.query)
         }
         cmd.append(" HTTP/1.1$CRLF")
-        cmd.append("Host: "+ url.host+CRLF)
-        val userAgent = SDK_USER_AGENT + "/" + BuildConfig.VERSION_NAME + " " + "Android" + "/" + Build.VERSION.RELEASE
-        cmd.append("User-Agent: $userAgent$CRLF")
+        cmd.append("Host: " + url.host + CRLF)
+        val userAgent =
+            SDK_USER_AGENT + "/" + BuildConfig.VERSION_NAME + " " + "Android" + "/" + Build.VERSION.RELEASE
+        cmd.append("$HEADER_USER_AGENT: $userAgent$CRLF")
         cmd.append("Accept: */*$CRLF")
         cmd.append("Connection: close$CRLF$CRLF")
         return cmd.toString()
@@ -75,11 +77,12 @@ internal class ClientSocket {
     private fun sendRequest(message: String): URL? {
         Log.d(TAG, "Client sending \n$message\n")
 
-        val bytesOfRequest: ByteArray = message.toByteArray(Charset.forName(StandardCharsets.UTF_8.name()))
+        val bytesOfRequest: ByteArray =
+            message.toByteArray(Charset.forName(StandardCharsets.UTF_8.name()))
         output.write(bytesOfRequest)
         output.flush()
 
-        Log.d(TAG, "Response " +"\n")
+        Log.d(TAG, "Response " + "\n")
 
         while (socket.isConnected) {
             var line = input.readLine();
@@ -90,16 +93,14 @@ internal class ClientSocket {
                     if (!parts.isEmpty() && parts.size >= 2) {
                         val status = Integer.valueOf(parts[1])
                         Log.d(TAG, "status: ${status}\n")
-                        /*if (status == 200) {
-                            continue
-                        } else*/ if ( status <300 || status > 310) {
+                        if (status < 300 || status > 310) {
                             Log.d(TAG, "Status - ${status}")
                             break
                         }
                     }
                 } else if (line.contains("ocation:")) {
                     var parts = line.split(" ")
-                    if (parts.isNotEmpty() && parts.size==2) {
+                    if (parts.isNotEmpty() && parts.size == 2) {
                         var redirect = parts[1]
                         Log.d(TAG, "Found redirect")
                         return URL(redirect);

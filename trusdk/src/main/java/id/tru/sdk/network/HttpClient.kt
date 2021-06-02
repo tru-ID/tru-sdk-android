@@ -29,10 +29,12 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
 import android.util.Log
-import androidx.annotation.NonNull
-import androidx.annotation.Nullable
 import androidx.annotation.RequiresApi
 import id.tru.sdk.BuildConfig
+import id.tru.sdk.Product
+import id.tru.sdk.ProductType.*
+import id.tru.sdk.ReachabilityDetails
+import id.tru.sdk.ReachabilityError
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -44,7 +46,8 @@ import org.json.JSONObject
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP) //API level 21, Lollipop 5.0, 92% coverage
 internal class HttpClient(context: Context) {
     private val context = context
-    private val client = OkHttpClient()
+
+    private val client by lazy { OkHttpClient() }
 
     private val connectivityManager by lazy {
         this.context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
@@ -63,7 +66,8 @@ internal class HttpClient(context: Context) {
      * @throws IllegalStateException when the call has already been executed.
      */
     @Throws(java.io.IOException::class)
-    fun requestSync(@NonNull url: String, @NonNull method: String, @Nullable body: RequestBody? = null): JSONObject? {
+    @Deprecated("This method will be deprecated in a future release")
+    fun requestSync(url: String, method: String, body: RequestBody? = null): JSONObject? {
 
         val capabilities = intArrayOf(NetworkCapabilities.NET_CAPABILITY_INTERNET)
         val transportTypes = intArrayOf(NetworkCapabilities.TRANSPORT_CELLULAR)
@@ -84,6 +88,7 @@ internal class HttpClient(context: Context) {
         return null
     }
 
+    @Deprecated("To be removed in the next release")
     private fun alwaysPreferNetworksWith(capabilities: IntArray, transportTypes: IntArray) {
         val request = NetworkRequest.Builder()
 
@@ -124,24 +129,112 @@ internal class HttpClient(context: Context) {
         connectivityManager.registerNetworkCallback(request.build(), networkCallback as ConnectivityManager.NetworkCallback)
     }
 
-    private fun executeRequest(@NonNull url: String, @NonNull method: String, @Nullable body: RequestBody? = null): String? {
+    /**
+     * Requests the @param url to find out the mobile Reachability status.
+     * @param full url to the Tru.Id endpoint (/device_ip)
+     * @param HTTP method - default is GET
+     */
+    fun requestReachability(url: String, method: String = "GET"): ReachabilityDetails? {
+
+        var reachabilityDetails: ReachabilityDetails? = null
+
+        executeRequest(url, method, null) { code, body ->
+
+            body?.let{
+                try {
+                    val json = JSONObject(it)
+                    when {
+                        code < 300 -> {
+                            //We have reachability details
+                            val country = if (json.has("country_code")) { json.getString("country_code") } else { null }
+                            val networkId = if (json.has("network_id")) { json.getString("network_id") } else { null }
+                            val networkName = if (json.has("network_name")) { json.getString("network_name") } else { null }
+                            val links = if (json.has("_links")) { json.getString("_links") } else { null }
+                            val products: ArrayList<Product>? = if (json.has("products")) {
+                                val array = json.getJSONArray("products")
+                                var _prod: ArrayList<Product> = ArrayList<Product>()
+                                for (i in 0 until array.length()) {
+                                    val item = array.getJSONObject(i)
+                                    val productName = item.getString("product_name")
+                                    val productId = item.getString("product_id")
+                                    var productType = when(productName) {
+                                        PhoneCheck.text -> PhoneCheck
+                                        SIMCheck.text -> SIMCheck
+                                        SubscriberCheck.text -> SubscriberCheck
+                                        else -> Unknown
+                                    }
+                                    _prod.add(Product(productId, productType))
+                                }
+                                _prod
+                            } else { null }
+
+                            reachabilityDetails = ReachabilityDetails(null, country, networkId, networkName, products, links)
+
+                        }
+                        code == 412 -> { //status code = 412
+                            val title = if (json.has("title")) { json.getString("title") } else { null }
+                            val type = if (json.has("type")) { json.getString("type") } else { null }
+                            val status = if (json.has("status")) { json.getInt("status") } else { 0 }
+                            val detail = if (json.has("detail")) { json.getString("detail") } else { null }
+                            var error = ReachabilityError(type, title, status, detail)
+
+                            reachabilityDetails = ReachabilityDetails(error,null,null, null, null, null)
+                        }
+                        else -> {
+                            Log.d(TAG,"HTTP status code is unexpected ${code}" )
+                        }
+                    }
+                } catch (e: JSONException) { Log.d(TAG,"JSON Exception") }
+            }
+
+        }
+
+        return reachabilityDetails
+    }
+
+    private fun executeRequest(url: String,
+                               method: String,
+                               body: RequestBody? = null,
+                               onCompletion: (status: Int, body: String?) -> Unit) {
+
         val request = Request.Builder()
             .method(method, body)
             .url(url)
-            .addHeader(HEADER_USER_AGENT,
-                SDK_USER_AGENT + "/" + BuildConfig.VERSION_NAME + " " +
-                        "Android" + "/" + Build.VERSION.RELEASE)
+            .addHeader(HEADER_USER_AGENT, userAgent())
             .build()
 
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Unexpected code $response")
+            onCompletion(response.code, response.body?.string())
+        }
+    }
+
+    private fun executeRequest(url: String,
+                               method: String,
+                               body: RequestBody? = null): String? {
+
+        val request = Request.Builder()
+            .method(method, body)
+            .url(url)
+            .addHeader(HEADER_USER_AGENT, userAgent())
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                Log.d(TAG, "Response $response")
+                Log.d(TAG, "Response ${response.body?.string()}")
+                throw IOException("Unexpected code $response")
+            }
 
             return response.body?.string()
         }
     }
 
+    private fun userAgent(): String {
+        return SDK_USER_AGENT + "/" + BuildConfig.VERSION_NAME + " " + "Android" + "/" + Build.VERSION.RELEASE
+    }
+
     companion object {
-        private const val TAG = "Client"
+        private const val TAG = "HTTPClient"
         private const val HEADER_USER_AGENT = "User-Agent"
         private const val SDK_USER_AGENT = "tru-sdk-android"
     }

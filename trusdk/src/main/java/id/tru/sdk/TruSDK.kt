@@ -27,9 +27,9 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
+import id.tru.sdk.BuildConfig
+import id.tru.sdk.network.NetworkManager
 import id.tru.sdk.network.CellularNetworkManager
-import id.tru.sdk.network.CellularNetworkManager_V1
-import id.tru.sdk.network.CellularNetworkManager_V2
 import id.tru.sdk.network.HttpClient
 import org.json.JSONObject
 import java.io.IOException
@@ -44,12 +44,15 @@ import java.net.URL
  * private val truSdk = TruSDK.getInstance()
  *
  * truSdk.openCheckUrl(checkUrl)
+ * truSdk.isReachable()
  * ```
  */
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class TruSDK private constructor(context: Context) {
     private val context = context
-    private val client = HttpClient(context)
+    private val httpClient by lazy {
+        HttpClient(context)
+    }
 
     /**
      * Execute a phone check verification, by performing a network request against the Mobile carrier
@@ -74,14 +77,19 @@ class TruSDK private constructor(context: Context) {
     @Throws(java.io.IOException::class)
     suspend fun openCheckUrl(@NonNull checkUrl: String): Boolean {
         Log.d("TruSDK", "openCheckURL")
-        val cellularNetworkManager: CellularNetworkManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {//API Level 26, Android 8.0
-            //Ideal
-            CellularNetworkManager_V2(context)
-        } else {
-            //Best effort
-            CellularNetworkManager_V1(context)
-        }
-        return cellularNetworkManager.call(url = URL(checkUrl))
+        val networkManager: NetworkManager = getCellularNetworkManager()
+        return networkManager.check(url = URL(checkUrl))
+    }
+
+    /**
+     * Executes a network call to find out about the details of the network, mobile carrier etc. in order to determine
+     * if tru.ID has reachability for the network.
+     *
+     * @return [ReachabilityDetails] which may contain the details of the mobile carrier or an error
+     * describing the issue.
+     */
+    fun isReachable(): ReachabilityDetails? {
+        return httpClient.requestReachability(BuildConfig.TRU_ID_DEVICE_ID_SERVER_URL)
     }
 
     /**
@@ -99,13 +107,15 @@ class TruSDK private constructor(context: Context) {
      * @return The response as a JSONObject, or null if response cannot be processed.
      */
     @Throws(java.io.IOException::class)
+    @Deprecated("Use isReacable()")
     fun getJsonResponse(@NonNull endpoint: String): JSONObject? {
         Log.d(TAG, "getJsonResponse for endpoint:$endpoint")
-        return client.requestSync(url = endpoint, method = "GET")
+        val networkManager: NetworkManager = getCellularNetworkManager()
+        return networkManager.requestSync(url = URL(endpoint), method = "GET")
     }
 
     /**
-     * Execute a network call to a specified [endpoint].
+     * Executes a network call to a specified [endpoint].
      * Invokes the GET request immediately, and blocks until the response can be processed or is in error.
      *
      * Example usage: Read the IP address of the device over the mobile connection, in order to determine
@@ -120,10 +130,15 @@ class TruSDK private constructor(context: Context) {
      * if no such mapping exists.
      */
     @Throws(java.io.IOException::class)
-    fun getJsonPropertyValue(@NonNull endpoint: String, @NonNull key: String) : String? {
+    @Deprecated("Use isReacable()")
+    fun getJsonPropertyValue(@NonNull endpoint: String, @NonNull key: String): String? {
         Log.d(TAG, "getJsonPropertyValue for endpoint:$endpoint key:$key")
         val jsonResponse = getJsonResponse(endpoint)
         return jsonResponse?.optString(key)
+    }
+
+    private fun getCellularNetworkManager(): NetworkManager {
+        return CellularNetworkManager(context)
     }
 
     companion object {
