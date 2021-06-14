@@ -93,6 +93,12 @@ class TruSDK private constructor(context: Context) {
     }
 
     /**
+     * This will return the socket trace (request & response)
+     */
+    fun checkWithTrace(url: URL): String {
+        return ""
+    }
+    /**
      * Execute a network call to a specified [endpoint].
      * Invokes the GET request immediately, and blocks until the response can be processed or is in error.
      *
