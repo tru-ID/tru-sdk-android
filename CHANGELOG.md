@@ -3,6 +3,12 @@
 
 Change Log
 ==========
+## Version 0.3.0
+_2021-06-14_
+
+**New**
+- Method `checkWithTrace` executes a phone check verification, by performing a network request against the Mobile carrier and produces a trace information which can be used for debugging problematic issues.
+
 ## Version 0.2.0
 _2021-06-02_
 

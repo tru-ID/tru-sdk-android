@@ -6,6 +6,7 @@ import java.net.URL
 
 internal interface NetworkManager {
     fun check(url: URL): Boolean
+    fun checkWithTrace(url: URL): Pair<Boolean, String>
     fun requestSync(
         url: URL,
         method: String,

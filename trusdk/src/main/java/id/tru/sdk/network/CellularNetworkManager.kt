@@ -87,6 +87,32 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
         return calledOnCellularNetwork
     }
 
+    override fun checkWithTrace(url: URL): Pair<Boolean, String> {
+        var calledOnCellularNetwork = false
+        var trace = ""
+        Log.d(TAG, "Triggering open check url")
+
+        checkNetworks()
+        execute {
+            calledOnCellularNetwork = it
+            if (it) {
+                Log.d(TAG, "-> After forcing isAvailable? ${isCellularAvailable()}")
+                Log.d(TAG, "-> After forcing isBound? ${isCellularBoundToProcess()}")
+                // We have Mobile Data registered and bound for use
+                // However, user may still have no data plan!
+                // Phone Check needs to be done on a socket for 2 reasons:
+                // - Redirects may be HTTP rather than HTTPs, as OkHTTP will raise Exception for clearText
+                // - We are not interested in the full response body, headers etc.
+                var cs = ClientSocket()
+                trace = cs.checkWithTrace(url)
+            } else {
+                Log.d(TAG, "We do not have a path")
+            }
+            checkNetworks()
+        }
+        return Pair(calledOnCellularNetwork, trace)
+    }
+
     /**
      * Request the @param url on the mobile device over the mobile data connection.
      * Unless otherwise specified, response bytes are decoded as UTF-8.
