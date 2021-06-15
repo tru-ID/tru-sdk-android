@@ -30,6 +30,7 @@ import androidx.annotation.RequiresApi
 import id.tru.sdk.network.NetworkManager
 import id.tru.sdk.network.CellularNetworkManager
 import id.tru.sdk.network.HttpClient
+import id.tru.sdk.network.TraceInfo
 import org.json.JSONObject
 import java.io.IOException
 import java.net.URL
@@ -102,7 +103,7 @@ class TruSDK private constructor(context: Context) {
      * not. Second value is the socket trace (request & response) as a String.
      */
     @Throws(java.io.IOException::class)
-    suspend fun checkWithTrace(url: URL): Pair<Boolean, String> {
+    suspend fun checkWithTrace(url: URL): TraceInfo {
         Log.d("TruSDK", "openCheckURL")
         val networkManager: NetworkManager = getCellularNetworkManager()
         return networkManager.checkWithTrace(url = url)

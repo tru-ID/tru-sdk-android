@@ -36,20 +36,20 @@ internal class ClientSocket {
         do {
             redirectCount += 1
             val nurl = redirectURL ?: url
-            Log.d(TAG, "Requesting: $nurl")
+            tracer.addDebug(Log.DEBUG, TAG, "Requesting: $nurl")
             startConnection(nurl)
             redirectURL = sendCommand(nurl)
             stopConnection()
         } while (redirectURL != null && redirectCount <= MAX_REDIRECT_COUNT)
-        Log.d(TAG, "Check complete")
+        tracer.addDebug(Log.DEBUG, TAG, "Check complete")
     }
 
-    fun checkWithTrace(url: URL): String {
+    fun checkWithTrace(url: URL): TraceInfo {
         tracer.startTrace()
         check(url = url)
-        val traceString = tracer.getTrace()
+        val traceInfo = tracer.getTrace()
         tracer.stopTrace()
-        return traceString
+        return traceInfo
     }
 
     private fun makeHTTPCommand(url: URL): String {
@@ -61,8 +61,7 @@ internal class ClientSocket {
         }
         cmd.append(" HTTP/1.1$CRLF")
         cmd.append("Host: " + url.host + CRLF)
-        val userAgent =
-            SDK_USER_AGENT + "/" + BuildConfig.VERSION_NAME + " " + "Android" + "/" + Build.VERSION.RELEASE
+        val userAgent = userAgent()
         cmd.append("$HEADER_USER_AGENT: $userAgent$CRLF")
         cmd.append("Accept: */*$CRLF")
         cmd.append("Connection: close$CRLF$CRLF")
@@ -75,7 +74,7 @@ internal class ClientSocket {
     }
 
     private fun startConnection(url: URL) {
-        Log.d(TAG, "start : ${url.host} ${url.protocol}")
+        tracer.addDebug(Log.DEBUG, TAG, "start : ${url.host} ${url.protocol}")
         tracer.addTrace("\nStart connection ${url.host} ${url.protocol} ${dateUtils.now()}\n")
         socket = if (url.protocol == "https") {
             SSLSocketFactory.getDefault().createSocket(url.host, 443)
@@ -86,33 +85,33 @@ internal class ClientSocket {
         output = socket.getOutputStream()
         input = BufferedReader(InputStreamReader(socket.inputStream))
 
-        Log.d(TAG, "Client connected : ${socket.inetAddress.hostAddress} ${socket.port}")
+        tracer.addDebug(Log.DEBUG, TAG, "Client connected : ${socket.inetAddress.hostAddress} ${socket.port}")
         tracer.addTrace("Connected ${dateUtils.now()}\n")
     }
 
     private fun sendRequest(message: String): URL? {
-        Log.d(TAG, "Client sending \n$message\n")
+        tracer.addDebug(Log.DEBUG, TAG, "Client sending \n$message\n")
         tracer.addTrace(message)
         val bytesOfRequest: ByteArray =
             message.toByteArray(Charset.forName(StandardCharsets.UTF_8.name()))
         output.write(bytesOfRequest)
         output.flush()
 
-        Log.d(TAG, "Response " + "\n")
+        tracer.addDebug(Log.DEBUG, TAG, "Response " + "\n")
         tracer.addTrace("Response - ${dateUtils.now()} \n")
 
         while (socket.isConnected) {
             var line = input.readLine();
             if (line != null) {
-                Log.d(TAG, line)
+                tracer.addDebug(Log.DEBUG, TAG, line)
                 tracer.addTrace(line)
                 if (line.startsWith("HTTP/")) {
                     val parts = line.split(" ")
-                    if (!parts.isEmpty() && parts.size >= 2) {
+                    if (parts.isNotEmpty() && parts.size >= 2) {
                         val status = Integer.valueOf(parts[1])
-                        Log.d(TAG, "status: ${status}\n")
+                        tracer.addDebug(Log.DEBUG, TAG, "status: ${status}\n")
                         if (status < 300 || status > 310) {
-                            Log.d(TAG, "Status - $status")
+                            tracer.addDebug(Log.DEBUG, TAG, "Status - $status")
                             tracer.addTrace("Status - $status ${dateUtils.now()}\n")
                             break
                         }
@@ -121,13 +120,13 @@ internal class ClientSocket {
                     var parts = line.split(" ")
                     if (parts.isNotEmpty() && parts.size == 2) {
                         var redirect = parts[1]
-                        Log.d(TAG, "Found redirect")
+                        tracer.addDebug(Log.DEBUG, TAG, "Found redirect")
                         tracer.addTrace("Found redirect - ${dateUtils.now()} \n")
                         return URL(redirect);
                     }
                 }
             } else {
-                Log.e(TAG, "Error reading the response.")
+                tracer.addDebug(Log.ERROR, TAG, "Error reading the response.")
                 break
             }
         }
@@ -135,20 +134,19 @@ internal class ClientSocket {
     }
 
     private fun stopConnection() {
-        Log.d(TAG, "closed the connection ${socket.inetAddress.hostAddress}")
+        tracer.addDebug(Log.DEBUG, TAG, "closed the connection ${socket.inetAddress.hostAddress}")
         try {
             input.close()
             output.close()
             socket.close()
         } catch (e: Throwable) {
-            Log.e(TAG, "Exception received whilst closing the socket ${e.localizedMessage}")
+            tracer.addDebug(Log.ERROR, TAG, "Exception received whilst closing the socket ${e.localizedMessage}")
         }
     }
 
     companion object {
         private const val TAG = "CellularClient"
         private const val HEADER_USER_AGENT = "User-Agent"
-        private const val SDK_USER_AGENT = "tru-sdk-android"
         private const val MAX_REDIRECT_COUNT = 10
     }
 }

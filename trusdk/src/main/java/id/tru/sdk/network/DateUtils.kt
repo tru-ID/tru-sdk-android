@@ -9,6 +9,12 @@ import java.util.*
 
 class DateUtils {
 
+    private val simpleDateFormat: SimpleDateFormat by lazy {
+        var sf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.ssssss'Z'")
+        sf.setTimeZone(TimeZone.getTimeZone("UTC"))
+        sf
+    }
+
     /**
      * Returns the ISO-8601 formatted date in UTC, such as '2011-12-03T10:15:30Z'
      */
@@ -16,8 +22,6 @@ class DateUtils {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             DateTimeFormatter.ISO_INSTANT.format(Instant.now())
         } else {
-            var simpleDateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.ssssss'Z'")
-            simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"))
             simpleDateFormat.format(Date())
         }
     }

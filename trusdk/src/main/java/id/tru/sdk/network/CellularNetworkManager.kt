@@ -87,9 +87,9 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
         return calledOnCellularNetwork
     }
 
-    override fun checkWithTrace(url: URL): Pair<Boolean, String> {
+    override fun checkWithTrace(url: URL): TraceInfo {
         var calledOnCellularNetwork = false
-        var trace = ""
+        lateinit var traceInfo: TraceInfo
         Log.d(TAG, "Triggering open check url")
 
         checkNetworks()
@@ -104,13 +104,15 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
                 // - Redirects may be HTTP rather than HTTPs, as OkHTTP will raise Exception for clearText
                 // - We are not interested in the full response body, headers etc.
                 var cs = ClientSocket()
-                trace = cs.checkWithTrace(url)
+                traceInfo = cs.checkWithTrace(url)
             } else {
-                Log.d(TAG, "We do not have a path")
+                var debugInfo = DebugInfo()
+                debugInfo.addLog(Log.DEBUG, TAG, "We do not have a path")
+                traceInfo = TraceInfo("Unable to force network to cellular - We do not have a path", debugInfo)
             }
             checkNetworks()
         }
-        return Pair(calledOnCellularNetwork, trace)
+        return traceInfo
     }
 
     /**
@@ -181,11 +183,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
                 val requestPrototype = Request.Builder()
                 requestPrototype.method(method, body)
                 requestPrototype.url(url)
-                requestPrototype.addHeader(
-                    HEADER_USER_AGENT,
-                    SDK_USER_AGENT + "/" + BuildConfig.VERSION_NAME + " " +
-                            "Android" + "/" + Build.VERSION.RELEASE
-                )
+                requestPrototype.addHeader(HEADER_USER_AGENT, userAgent())
 
                 if (headerName != null && headerValue != null) {
                     requestPrototype.addHeader(headerName, headerValue)
@@ -381,9 +379,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
 
     private fun checkNetworks() {
         Log.d(TAG, "----- Check ------")
-        Log.d(
-            TAG,
-            "Is Default Network Active? " + connectivityManager.isDefaultNetworkActive.toString()
+        Log.d(TAG, "Is Default Network Active? " + connectivityManager.isDefaultNetworkActive.toString()
         )
         boundNetwork()
         activeNetworkInfo()
@@ -425,7 +421,6 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
         private const val TAG = "CellularNetworkManager"
         private const val TIME_OUT: Long = 5000
         private const val HEADER_USER_AGENT = "User-Agent"
-        private const val SDK_USER_AGENT = "tru-sdk-android"
     }
 
     private fun boundNetwork() { //API 23
