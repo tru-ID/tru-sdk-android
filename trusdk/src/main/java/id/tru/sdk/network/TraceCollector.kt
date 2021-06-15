@@ -2,15 +2,15 @@ package id.tru.sdk.network
 
 class TraceCollector {
     private var trace = StringBuilder()
-    private var traceOn = false
+    private var isTraceEnabled = false
 
     fun startTrace() {
         trace.clear()
-        traceOn = true
+        isTraceEnabled = true
     }
 
     fun stopTrace() {
-        traceOn = false
+        isTraceEnabled = false
         trace.clear()
     }
 
@@ -19,7 +19,7 @@ class TraceCollector {
     }
 
     fun addTrace(log: String) {
-        if (traceOn) trace.append(log + "\n")
+        if (isTraceEnabled) trace.append(log + "\n")
     }
 
 }
