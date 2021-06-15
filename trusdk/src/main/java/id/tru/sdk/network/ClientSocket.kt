@@ -18,12 +18,10 @@ import java.util.*
 import javax.net.ssl.SSLSocketFactory
 
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP) //API Level 21
-internal class ClientSocket {
+internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollector.instance) {
     private lateinit var socket: Socket
     private lateinit var output: OutputStream
     private lateinit var input: BufferedReader
-
-    private val tracer = TraceCollector()
 
     /**
      * To be used for phoneCheck.
@@ -43,12 +41,8 @@ internal class ClientSocket {
         tracer.addDebug(Log.DEBUG, TAG, "Check complete")
     }
 
-    fun checkWithTrace(url: URL): TraceInfo {
-        tracer.startTrace()
+    fun checkWithTrace(url: URL) {
         check(url = url)
-        val traceInfo = tracer.getTrace()
-        tracer.stopTrace()
-        return traceInfo
     }
 
     private fun makeHTTPCommand(url: URL): String {
