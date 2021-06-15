@@ -4,10 +4,13 @@ import android.os.Build
 import android.util.Log
 import id.tru.sdk.BuildConfig
 
-
+/**
+ * Collects trace and debugging information for each `check` session.
+ */
 class TraceCollector {
     private val debugInfo = DebugInfo()
-    private val trace = StringBuilder()
+    private val trace by lazy { StringBuilder().append("${DateUtils.now()}: ${deviceInfo()}") }
+
     private var isTraceEnabled = false
     var isTraceCollectedOnCellularNetwork = false
 
@@ -49,12 +52,7 @@ data class TraceInfo(val trace: String, val debugInfo: DebugInfo)
 
 class DebugInfo {
     private val bufferMap by lazy {
-        val manufacturer = Build.MANUFACTURER
-        val model = Build.MODEL
-        val version = Build.VERSION.SDK_INT
-        val versionRelease = Build.VERSION.RELEASE
-        mutableMapOf<String, String>( dateUtils.now() to "Debug Trace starting on: $manufacturer, $model, $version, $versionRelease",
-            dateUtils.now() to "User-Agent: ${userAgent()}")
+        mutableMapOf<String, String>( DateUtils.now() to deviceInfo())
     }
 
     private val dateUtils: DateUtils by lazy {
@@ -68,7 +66,7 @@ class DebugInfo {
 
     @Synchronized
     fun addLog(priority: Int, tag: String, msg: String) {
-        bufferMap[dateUtils.now()] = "$tag - $msg"
+        bufferMap[DateUtils.now()] = "$tag - $msg"
 
         when(priority) {
             2 -> Log.v(tag, msg)//VERBOSE
@@ -95,5 +93,13 @@ class DebugInfo {
 
 fun userAgent(): String {
     return "tru-sdk-android" + "/" + BuildConfig.VERSION_NAME + " " + "Android" + "/" + Build.VERSION.RELEASE
+}
+
+fun deviceInfo(): String {
+    val manufacturer = Build.MANUFACTURER
+    val model = Build.MODEL
+    val version = Build.VERSION.SDK_INT
+    val versionRelease = Build.VERSION.RELEASE
+    return "DeviceInfo: $manufacturer, $model, $version, $versionRelease \n User-Agent: ${userAgent()}\n"
 }
 

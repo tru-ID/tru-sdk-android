@@ -22,9 +22,8 @@ internal class ClientSocket {
     private lateinit var socket: Socket
     private lateinit var output: OutputStream
     private lateinit var input: BufferedReader
-    //
+
     private val tracer = TraceCollector()
-    private val dateUtils = DateUtils()
 
     /**
      * To be used for phoneCheck.
@@ -75,7 +74,7 @@ internal class ClientSocket {
 
     private fun startConnection(url: URL) {
         tracer.addDebug(Log.DEBUG, TAG, "start : ${url.host} ${url.protocol}")
-        tracer.addTrace("\nStart connection ${url.host} ${url.protocol} ${dateUtils.now()}\n")
+        tracer.addTrace("\nStart connection ${url.host} ${url.protocol} ${DateUtils.now()}\n")
         socket = if (url.protocol == "https") {
             SSLSocketFactory.getDefault().createSocket(url.host, 443)
         } else {
@@ -86,7 +85,7 @@ internal class ClientSocket {
         input = BufferedReader(InputStreamReader(socket.inputStream))
 
         tracer.addDebug(Log.DEBUG, TAG, "Client connected : ${socket.inetAddress.hostAddress} ${socket.port}")
-        tracer.addTrace("Connected ${dateUtils.now()}\n")
+        tracer.addTrace("Connected ${DateUtils.now()}\n")
     }
 
     private fun sendRequest(message: String): URL? {
@@ -98,7 +97,7 @@ internal class ClientSocket {
         output.flush()
 
         tracer.addDebug(Log.DEBUG, TAG, "Response " + "\n")
-        tracer.addTrace("Response - ${dateUtils.now()} \n")
+        tracer.addTrace("Response - ${DateUtils.now()} \n")
 
         while (socket.isConnected) {
             var line = input.readLine();
@@ -112,7 +111,7 @@ internal class ClientSocket {
                         tracer.addDebug(Log.DEBUG, TAG, "status: ${status}\n")
                         if (status < 300 || status > 310) {
                             tracer.addDebug(Log.DEBUG, TAG, "Status - $status")
-                            tracer.addTrace("Status - $status ${dateUtils.now()}\n")
+                            tracer.addTrace("Status - $status ${DateUtils.now()}\n")
                             break
                         }
                     }
@@ -121,7 +120,7 @@ internal class ClientSocket {
                     if (parts.isNotEmpty() && parts.size == 2) {
                         var redirect = parts[1]
                         tracer.addDebug(Log.DEBUG, TAG, "Found redirect")
-                        tracer.addTrace("Found redirect - ${dateUtils.now()} \n")
+                        tracer.addTrace("Found redirect - ${DateUtils.now()} \n")
                         return URL(redirect);
                     }
                 }
