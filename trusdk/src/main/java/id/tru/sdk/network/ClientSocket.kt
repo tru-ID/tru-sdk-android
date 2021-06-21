@@ -67,12 +67,16 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
     }
 
     private fun startConnection(url: URL) {
-        tracer.addDebug(Log.DEBUG, TAG, "start : ${url.host} ${url.protocol}")
-        tracer.addTrace("\nStart connection ${url.host} ${url.protocol} ${DateUtils.now()}\n")
+        var port = 80
+        if (url.port > 0 ) port = url.port
+        tracer.addDebug(Log.DEBUG, TAG, "start : ${url.host} ${url.port} ${url.protocol}")
+        tracer.addTrace("\nStart connection ${url.host} ${url.port} ${url.protocol} ${DateUtils.now()}\n")
         socket = if (url.protocol == "https") {
-            SSLSocketFactory.getDefault().createSocket(url.host, 443)
+            port = 443
+            if (url.port > 0) port = url.port
+            SSLSocketFactory.getDefault().createSocket(url.host, port)
         } else {
-            Socket(url.host, 80)
+            Socket(url.host, port)
         }
 
         output = socket.getOutputStream()
