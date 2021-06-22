@@ -27,10 +27,10 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
-import id.tru.sdk.BuildConfig
 import id.tru.sdk.network.NetworkManager
 import id.tru.sdk.network.CellularNetworkManager
 import id.tru.sdk.network.HttpClient
+import id.tru.sdk.network.TraceInfo
 import org.json.JSONObject
 import java.io.IOException
 import java.net.URL
@@ -82,6 +82,34 @@ class TruSDK private constructor(context: Context) {
     }
 
     /**
+     * Execute a phone check verification, by performing a network request against the Mobile carrier
+     * over mobile data connection with a trace information.
+     *
+     * Invokes the request immediately, and blocks until the response can be processed or is in error.
+     *
+     * Prerequisites:
+     * Get the mobile application user's phone number and create a PhoneCheck via the tru.ID API
+     * in order to receive a unique `check_url` in the response.
+     * Request the `check_url` on the mobile device over the mobile data connection.
+     *
+     * @param checkUrl The phone check url.
+     *
+     * @WorkerThread
+     * @throws IOException if the request could not be executed due to cancellation, a connectivity
+     *     problem or timeout. Because networks can fail during an exchange, it is possible that the
+     *     remote server accepted the request before the failure.
+     * @throws IllegalStateException when the call has already been executed.
+     * @return A Pair. First value indicating whether the request was made on a Cellular Network or
+     * not. Second value is the socket trace (request & response) as a String.
+     */
+    @Throws(java.io.IOException::class)
+    suspend fun checkWithTrace(url: URL): TraceInfo {
+        Log.d("TruSDK", "openCheckURL")
+        val networkManager: NetworkManager = getCellularNetworkManager()
+        return networkManager.checkWithTrace(url = url)
+    }
+
+    /**
      * Executes a network call to find out about the details of the network, mobile carrier etc. in order to determine
      * if tru.ID has reachability for the network.
      *
@@ -107,7 +135,7 @@ class TruSDK private constructor(context: Context) {
      * @return The response as a JSONObject, or null if response cannot be processed.
      */
     @Throws(java.io.IOException::class)
-    @Deprecated("Use isReacable()")
+    @Deprecated("Use isReachable()")
     fun getJsonResponse(@NonNull endpoint: String): JSONObject? {
         Log.d(TAG, "getJsonResponse for endpoint:$endpoint")
         val networkManager: NetworkManager = getCellularNetworkManager()
@@ -130,7 +158,7 @@ class TruSDK private constructor(context: Context) {
      * if no such mapping exists.
      */
     @Throws(java.io.IOException::class)
-    @Deprecated("Use isReacable()")
+    @Deprecated("Use isReachable()")
     fun getJsonPropertyValue(@NonNull endpoint: String, @NonNull key: String): String? {
         Log.d(TAG, "getJsonPropertyValue for endpoint:$endpoint key:$key")
         val jsonResponse = getJsonResponse(endpoint)
