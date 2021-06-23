@@ -19,7 +19,7 @@ class DateUtils {
         /**
          * Returns the ISO-8601 formatted date in UTC, such as '2011-12-03T10:15:30Z'
          */
-        fun now(): String {
+        public fun now(): String {
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 DateTimeFormatter.ISO_INSTANT.format(Instant.now())
             } else {

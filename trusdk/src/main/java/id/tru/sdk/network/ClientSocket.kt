@@ -63,7 +63,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
 
     private fun sendCommand(url: URL): URL? {
         val command = makeHTTPCommand(url)
-        return sendRequest(command)
+        return sendRequest(url, command)
     }
 
     private fun startConnection(url: URL) {
@@ -86,7 +86,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         tracer.addTrace("Connected ${DateUtils.now()}\n")
     }
 
-    private fun sendRequest(message: String): URL? {
+    private fun sendRequest(requestURL: URL, message: String): URL? {
         tracer.addDebug(Log.DEBUG, TAG, "Client sending \n$message\n")
         tracer.addTrace(message)
         val bytesOfRequest: ByteArray =
@@ -114,18 +114,27 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
                         }
                     }
                 } else if (line.contains("ocation:")) {
-                    var parts = line.split(" ")
-                    if (parts.isNotEmpty() && parts.size == 2) {
-                        var redirect = parts[1]
-                        tracer.addDebug(Log.DEBUG, TAG, "Found redirect")
-                        tracer.addTrace("Found redirect - ${DateUtils.now()} \n")
-                        return URL(redirect);
-                    }
+                    return parseRedirect(requestURL, line)
                 }
             } else {
                 tracer.addDebug(Log.ERROR, TAG, "Error reading the response.")
                 break
             }
+        }
+        return null
+    }
+
+    fun parseRedirect(requestURL: URL, redirectLine: String): URL? {
+        var parts = redirectLine.split(" ")
+        if (parts.isNotEmpty() && parts.size == 2) {
+            if (parts[1].isBlank()) return null
+            val redirect = parts[1].toLowerCase()
+            if(!redirect.startsWith("http") && !redirect.startsWith("https")) {
+                return URL(requestURL, redirect)
+            }
+            tracer.addDebug(Log.DEBUG, TAG, "Found redirect")
+            tracer.addTrace("Found redirect - ${DateUtils.now()} \n")
+            return URL(redirect);
         }
         return null
     }
