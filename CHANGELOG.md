@@ -7,7 +7,7 @@ Change Log
 _2021-06-23_
 
 **Bug Fix**
-- Fixed a bug where lowecasing for relative redirects is removed
+- Fixed a bug where lowercasing for relative redirects is removed
 
 ## Version 0.2.2
 _2021-06-23_
