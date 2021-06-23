@@ -23,7 +23,19 @@ class ClientSocketTest {
         val expectedRedirectURL = URL("https://www.tru.id/redirect/1")
 
         val clientSocket = ClientSocket()
-        val redirectURL = clientSocket.parseRedirect(requestURL,responseLocationLine)
+        val redirectURL = clientSocket.parseRedirect(requestURL, responseLocationLine)
+        assertEquals(redirectURL, expectedRedirectURL)
+    }
+
+    @Test
+    fun parseRedirect_GivenARegularRedirectURLWithLowerUpperCaseCharacters_ShouldReturn_Itself() {
+
+        val requestURL = URL("https://www.tru.id/check")
+        val responseLocationLine = "Location: https://www.cnn.com/interaction/ExlouINc"
+        val expectedRedirectURL = URL("https://www.cnn.com/interaction/ExlouINc")
+
+        val clientSocket = ClientSocket()
+        val redirectURL = clientSocket.parseRedirect(requestURL, responseLocationLine)
         assertEquals(redirectURL, expectedRedirectURL)
     }
 
@@ -35,7 +47,7 @@ class ClientSocketTest {
         val expectedRedirectURL = URL("https://www.cnn.com/redirect/1")
 
         val clientSocket = ClientSocket()
-        val redirectURL = clientSocket.parseRedirect(requestURL,responseLocationLine)
+        val redirectURL = clientSocket.parseRedirect(requestURL, responseLocationLine)
         assertEquals(redirectURL, expectedRedirectURL)
     }
 
