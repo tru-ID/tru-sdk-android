@@ -3,6 +3,12 @@
 
 Change Log
 ==========
+## Version 0.2.2
+_2021-06-23_
+
+**Bug Fix**
+- Fixed a bug where relative redirects where not handled.
+
 ## Version 0.2.1
 _2021-06-14_
 

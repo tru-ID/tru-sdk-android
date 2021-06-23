@@ -14,7 +14,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 30
         versionCode 4
-        versionName "0.2.1"
+        versionName "0.2.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -56,7 +56,7 @@ publishing {
         aar(MavenPublication) {
             groupId = 'id.tru.sdk'
             artifactId = 'tru-sdk-android'
-            version = '0.2.1'
+            version = '0.2.2'
             artifact("$buildDir/outputs/aar/${project.name}-release.aar")
         }
     }
@@ -75,11 +75,14 @@ publishing {
 }
 
 dependencies {
+    implementation "androidx.appcompat:appcompat:$app_compat_version"
+    //Kotlin
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation "androidx.core:core-ktx:$ktx_version"
-    implementation "androidx.appcompat:appcompat:$app_compat_version"
+    //Networking
     implementation "com.squareup.okhttp3:okhttp:$okhttp_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$okhttp_version"
+    // Testing
     testImplementation 'org.robolectric:robolectric:4.5.1'
     testImplementation "junit:junit:${junit_version}"
     testImplementation "com.squareup.okhttp3:mockwebserver:$okhttp_version"
