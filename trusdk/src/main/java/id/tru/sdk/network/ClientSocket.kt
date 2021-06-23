@@ -128,8 +128,8 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         var parts = redirectLine.split(" ")
         if (parts.isNotEmpty() && parts.size == 2) {
             if (parts[1].isBlank()) return null
-            val redirect = parts[1].toLowerCase()
-            if(!redirect.startsWith("http") && !redirect.startsWith("https")) {
+            val redirect = parts[1]
+            if(!redirect.startsWith("http")) { //http & https
                 return URL(requestURL, redirect)
             }
             tracer.addDebug(Log.DEBUG, TAG, "Found redirect")
