@@ -30,6 +30,7 @@ import android.net.NetworkRequest
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
+//import id.tru.android.BuildConfig
 import id.tru.sdk.BuildConfig
 import id.tru.sdk.Product
 import id.tru.sdk.ProductType.*

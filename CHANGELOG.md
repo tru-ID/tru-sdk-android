@@ -3,6 +3,12 @@
 
 Change Log
 ==========
+## Version 0.2.4
+_2021-06-25_
+
+**Bug Fix**
+- Fixed a bug where SDK may not be able to make consecutive successful requests, after being in the background for a while or networks switches in the background between sessions 
+
 ## Version 0.2.3
 _2021-06-23_
 

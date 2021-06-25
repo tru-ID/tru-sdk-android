@@ -1,3 +1,25 @@
+/*
+ * MIT License
+ * Copyright (C) 2020 4Auth Limited. All rights reserved
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 package id.tru.sdk.network
 
 import android.content.Context
@@ -9,7 +31,6 @@ import android.os.Looper
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.annotation.RequiresApi
-import id.tru.sdk.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -79,7 +100,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
                 // Phone Check needs to be done on a socket for 2 reasons:
                 // - Redirects may be HTTP rather than HTTPs, as OkHTTP will raise Exception for clearText
                 // - We are not interested in the full response body, headers etc.
-                var cs = ClientSocket()
+                val cs = ClientSocket()
                 cs.check(url)
             } else {
                 tracer.addDebug(Log.DEBUG, TAG,"We do not have a path")
@@ -94,7 +115,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
         tracer.startTrace()
         val isConnectedOnCellular = check(url)
         tracer.isTraceCollectedOnCellularNetwork = isConnectedOnCellular
-        var traceInfo = tracer.getTrace()
+        val traceInfo = tracer.getTrace()
         tracer.stopTrace()
         return traceInfo
     }
@@ -236,10 +257,14 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!cellularInfo.isDataEnabled) {
                 Log.d(TAG, "Mobile Data is NOT enabled, we can not force cellular!")
-                Thread(Runnable {
-                    tracer.addDebug(Log.DEBUG, TAG,"Calling completion -- Is Main thread? ${isMainThread()}")
+                Thread {
+                    tracer.addDebug(
+                        Log.DEBUG,
+                        TAG,
+                        "Calling completion -- Is Main thread? ${isMainThread()}"
+                    )
                     onCompletion(false)
-                }).start()
+                }.start()
                 return
             } else {
                 tracer.addDebug(Log.DEBUG, TAG,"-> Mobile Data is Enabled!")
@@ -257,23 +282,20 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
                         // (and not explicitly bound via a bound SocketFactory from {@link Network#getSocketFactory() Network.getSocketFactory()})
                         // will be bound to network.
                         tracer.addDebug(Log.DEBUG, TAG,"  Binding to process:")
-                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                            ConnectivityManager.setProcessDefaultNetwork(network)
-                        } else {
-                            connectivityManager.bindProcessToNetwork(network) //API Level 23, 6.0 Marsh
-                        }
+                        bind(network)
                         //OR you can bind the socket to the Network
                         //network.bindSocket()
                         tracer.addDebug(Log.DEBUG, TAG,"  Binding finished. Is Main thread? ${isMainThread()}")
                         cancelTimeout()
                         onCompletion(true) //Network request needs to be done in this lambda
                     } catch (e: IllegalStateException) {
-                        tracer.addDebug(Log.ERROR, TAG,"ConnectivityManager.NetworkCallback.onAvailable: ${e.toString()}")
+                        tracer.addDebug(Log.ERROR, TAG,"ConnectivityManager.NetworkCallback.onAvailable: $e")
                         cancelTimeout()
                         onCompletion(false)
                     } finally {
                         // Release the request when done.
                         unregisterCellularNetworkListener()
+                        bind(null)
                     }
                 }
 
@@ -320,12 +342,34 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
 
     }
 
-    private fun requestNetwork(request: NetworkRequest, onCompletion: (isSucess: Boolean) -> Unit) {
+    private fun switchToAvailableNetwork() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            for (network in connectivityManager.allNetworks) {
+                if (isWIFI(network)) {
+                    bind(network)
+                    break
+                }
+            }
+        } else {
+            bind(connectivityManager.activeNetwork)
+        }
+    }
+
+
+    private fun bind(network: Network?) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            ConnectivityManager.setProcessDefaultNetwork(network)
+        } else {
+            connectivityManager.bindProcessToNetwork(network) //API Level 23, 6.0 Marsh
+        }
+    }
+
+    private fun requestNetwork(request: NetworkRequest, onCompletion: (isSuccess: Boolean) -> Unit) {
         //The network request will live, until unregisterNetworkCallback is called or app exit.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {//API Level 26
             timeoutTask = Timer("Setting Up", true).schedule(TIME_OUT) {
                 tracer.addDebug(Log.DEBUG, TAG,"Timeout...")
-                Thread(Runnable { onCompletion(false) }).start()
+                Thread { onCompletion(false) }.start()
             }
             connectivityManager.requestNetwork(
                 request,
@@ -344,7 +388,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
     private fun cancelTimeout() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             tracer.addDebug(Log.DEBUG, TAG,"Cancelling timeout")
-            timeoutTask?.let { it.cancel() }
+            timeoutTask?.cancel()
         }
     }
 
@@ -363,8 +407,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
 
     private fun checkNetworks() {
         tracer.addDebug(Log.DEBUG, TAG,"----- Check ------")
-        tracer.addDebug(Log.DEBUG, TAG,"Is Default Network Active? " + connectivityManager.isDefaultNetworkActive.toString()
-        )
+        tracer.addDebug(Log.DEBUG, TAG,"Is Default Network Active? " + connectivityManager.isDefaultNetworkActive.toString())
         boundNetwork()
         activeNetworkInfo()
         availableNetworks()
@@ -375,6 +418,18 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
         caps?.let {
             if (it.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
                 it.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+            ) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun isWIFI(network: Network): Boolean {
+        val caps = connectivityManager.getNetworkCapabilities(network)
+        caps?.let {
+            if (it.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                (it.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))
             ) {
                 return true
             }
@@ -454,8 +509,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
                     networkType(it)
                     tracer.addDebug(Log.DEBUG, TAG,"Signal Strength : " + it.signalStrength)
 
-                    val transportInfo =
-                        it.transportInfo // API Level 29, WifiAwareNetworkInfo, WifiInfo
+                    val transportInfo = it.transportInfo // API Level 29, WifiAwareNetworkInfo, WifiInfo
                     if (it.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
                         tracer.addDebug(Log.DEBUG, TAG,"Cap: Internet Capability")
                     }
@@ -483,8 +537,8 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
     }
 
     private fun linkName(network: Network): String {
-        val activeNetworkLinkProperties = connectivityManager.getLinkProperties(network)
-        return activeNetworkLinkProperties?.interfaceName ?: "None"
+        val networkLinkProperties = connectivityManager.getLinkProperties(network)
+        return networkLinkProperties?.interfaceName ?: "None"
     }
 
     private fun linkAddresses(network: Network) {
@@ -504,7 +558,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
         trustManagerFactory.init(null as KeyStore?)
         val trustManagers: Array<TrustManager> = trustManagerFactory.trustManagers
         check(!(trustManagers.size != 1 || trustManagers[0] !is X509TrustManager)) {
-            ("Unexpected default trust managers:" + Arrays.toString(trustManagers))
+            ("Unexpected default trust managers:" + trustManagers.contentToString())
         }
         return trustManagers[0] as X509TrustManager
 //        val sslContext: SSLContext = SSLContext.getInstance("TLS")
