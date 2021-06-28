@@ -34,6 +34,7 @@ import id.tru.sdk.network.TraceInfo
 import org.json.JSONObject
 import java.io.IOException
 import java.net.URL
+//import id.tru.android.BuildConfig
 
 /**
  * TruSDK main entry point.
@@ -43,7 +44,7 @@ import java.net.URL
  * TruSDK.initializeSdk(requireContext())
  * private val truSdk = TruSDK.getInstance()
  *
- * truSdk.openCheckUrl(checkUrl)
+ * truSdk.check(checkUrl)
  * truSdk.isReachable()
  * ```
  */

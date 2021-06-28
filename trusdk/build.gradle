@@ -14,12 +14,13 @@ android {
         minSdkVersion 21
         targetSdkVersion 30
         versionCode 4
-        versionName "0.2.3"
+        versionName "0.2.4"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
 
-        buildConfigField("String", "TRU_ID_DEVICE_ID_SERVER_URL", '"https://eu.api.tru.id/public/coverage/v0.1/device_ip"')
+        buildConfigField("String", "TRU_ID_DEVICE_ID_SERVER_URL",
+                '"https://eu.api.tru.id/public/coverage/v0.1/device_ip"')
     }
 
     buildTypes {
@@ -56,7 +57,7 @@ publishing {
         aar(MavenPublication) {
             groupId = 'id.tru.sdk'
             artifactId = 'tru-sdk-android'
-            version = '0.2.3'
+            version = '0.2.4'
             artifact("$buildDir/outputs/aar/${project.name}-release.aar")
         }
     }
