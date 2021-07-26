@@ -21,22 +21,33 @@
  * SOFTWARE.
  */
 package id.tru.sdk
+import android.util.Log
+import androidx.annotation.NonNull
+import kotlinx.serialization.*
+import kotlinx.serialization.json.*
 
 /**
  * The details of the mobile carrier etc. and available Tru.Id products supported.
  */
+@Serializable
 data class ReachabilityDetails(
     val error: ReachabilityError?,
-    val countryCode: String?,
-    val networkId: String?,
-    val networkName: String?,
+    val countryCode: String,
+    val networkId: String,
+    val networkName: String,
     val products: ArrayList<Product>?,
     val link: String?
-)
+) {
+    fun toJsonString(): String {
+        return Json.encodeToString(this)
+    }
+}
+
 
 /**
  * Tru.Id product (API)
  */
+@Serializable
 data class Product(val productId: String, val productType: ProductType)
 
 /**
@@ -52,9 +63,11 @@ enum class ProductType(val text: String) {
 /**
  * If the isReachable() request is not done via cellular network, this class represents the error.
  */
+@Serializable
 data class ReachabilityError(
     val type: String?,
     val title: String?,
     val status: Int,
     val detail: String?
 )
+
