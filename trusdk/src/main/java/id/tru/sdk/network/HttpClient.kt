@@ -147,9 +147,9 @@ internal class HttpClient(context: Context) {
                     when {
                         code < 300 -> {
                             //We have reachability details
-                            val country = if (json.has("country_code")) { json.getString("country_code") } else { null }
-                            val networkId = if (json.has("network_id")) { json.getString("network_id") } else { null }
-                            val networkName = if (json.has("network_name")) { json.getString("network_name") } else { null }
+                            val country = if (json.has("country_code")) { json.getString("country_code") } else { "" }
+                            val networkId = if (json.has("network_id")) { json.getString("network_id") } else { "" }
+                            val networkName = if (json.has("network_name")) { json.getString("network_name") } else { "" }
                             val links = if (json.has("_links")) { json.getString("_links") } else { null }
                             val products: ArrayList<Product>? = if (json.has("products")) {
                                 val array = json.getJSONArray("products")
@@ -179,7 +179,7 @@ internal class HttpClient(context: Context) {
                             val detail = if (json.has("detail")) { json.getString("detail") } else { null }
                             var error = ReachabilityError(type, title, status, detail)
 
-                            reachabilityDetails = ReachabilityDetails(error,null,null, null, null, null)
+                            reachabilityDetails = ReachabilityDetails(error,"","", "", null, null)
                         }
                         else -> {
                             Log.d(TAG,"HTTP status code is unexpected ${code}" )
