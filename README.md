@@ -16,7 +16,7 @@ https://gitlab.com/api/v4/projects/22035475/packages/maven
 build.gradle -> dependencies add
 
 ```
-    implementation 'id.tru.sdk:tru-sdk-android:0.2.4'
+    implementation 'id.tru.sdk:tru-sdk-android:0.2.5'
 ```
 
 Compatibility
@@ -35,7 +35,7 @@ TruSDK.initializeSdk(this.applicationContext)
 ...
 val truSdk = TruSDK.getInstance()
 ...
-val isExecutedOnCellular = truSdk.openCheckUrl(checkUrl)
+val isExecutedOnCellular = truSdk.check(checkUrl)
 
 val (isOnCellular, traceInfo) = truSdk.checkWithTrace(checkUrl)
 
@@ -60,7 +60,7 @@ Requires a `Deploy-Token` with scope `read_package_registry` & `write_package_re
 
 Add the newly created token to the env var `TRU_SDK_ANDROID_TOKEN`
 
-Update semver in build.gradle
+Update server in build.gradle
 
 ```
 ./gradlew publish

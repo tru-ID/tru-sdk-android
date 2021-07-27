@@ -76,7 +76,34 @@ class TruSDK private constructor(context: Context) {
      * @return Indicating whether the request was made on a Cellular Network or not
      */
     @Throws(java.io.IOException::class)
+    @Deprecated("Use check(checkUrl)", replaceWith = ReplaceWith("check(checkUrl)"))
     suspend fun openCheckUrl(@NonNull checkUrl: String): Boolean {
+        Log.d("TruSDK", "openCheckURL")
+        val networkManager: NetworkManager = getCellularNetworkManager()
+        return networkManager.check(url = URL(checkUrl))
+    }
+    /**
+     * Execute a phone check verification, by performing a network request against the Mobile carrier
+     * over mobile data connection.
+     *
+     * Invokes the request immediately, and blocks until the response can be processed or is in error.
+     *
+     * Prerequisites:
+     * Get the mobile application user's phone number and create a PhoneCheck via the tru.ID API
+     * in order to receive a unique `check_url` in the response.
+     * Request the `check_url` on the mobile device over the mobile data connection.
+     *
+     * @param checkUrl The phone check url.
+     *
+     * @WorkerThread
+     * @throws IOException if the request could not be executed due to cancellation, a connectivity
+     *     problem or timeout. Because networks can fail during an exchange, it is possible that the
+     *     remote server accepted the request before the failure.
+     * @throws IllegalStateException when the call has already been executed.
+     * @return Indicating whether the request was made on a Cellular Network or not
+     */
+    @Throws(java.io.IOException::class)
+    suspend fun check(@NonNull checkUrl: String): Boolean {
         Log.d("TruSDK", "openCheckURL")
         val networkManager: NetworkManager = getCellularNetworkManager()
         return networkManager.check(url = URL(checkUrl))
@@ -136,7 +163,7 @@ class TruSDK private constructor(context: Context) {
      * @return The response as a JSONObject, or null if response cannot be processed.
      */
     @Throws(java.io.IOException::class)
-    @Deprecated("Use isReachable()")
+    @Deprecated("Use isReachable()", replaceWith = ReplaceWith("isReachable()"))
     fun getJsonResponse(@NonNull endpoint: String): JSONObject? {
         Log.d(TAG, "getJsonResponse for endpoint:$endpoint")
         val networkManager: NetworkManager = getCellularNetworkManager()

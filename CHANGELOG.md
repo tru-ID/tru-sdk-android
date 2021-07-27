@@ -3,6 +3,15 @@
 
 Change Log
 ==========
+## Version 0.2.5
+_2021-07-27_
+
+**Changes**
+- Deprecated `openCheckUrl(url)` and replaced with `check(url)`
+
+**New**
+- Added a convenience method to serialise ReachabilityDetails to jsonString. ReachabilityDetails fields (countryCode, networkId, networkName) were made non-optional and initialised with empty string.
+
 ## Version 0.2.4
 _2021-06-25_
 
