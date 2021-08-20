@@ -143,7 +143,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
 
     fun parseRedirect(requestURL: URL, redirectLine: String): URL? {
         var parts = redirectLine.split(" ")
-        if (parts.isNotEmpty() && parts.size == 2) {
+        if (parts.isNotEmpty() && parts.size > 1) {
             if (parts[1].isBlank()) return null
             val redirect = parts[1]
             if(!redirect.startsWith("http")) { //http & https

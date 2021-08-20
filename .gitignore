@@ -47,5 +47,5 @@ buck-out/
 .project
 .settings/
 .vscode/
-
+.classpath
 .env
