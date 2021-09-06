@@ -21,10 +21,10 @@
  * SOFTWARE.
  */
 package id.tru.sdk
-import android.util.Log
-import androidx.annotation.NonNull
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
+
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * The details of the mobile carrier etc. and available Tru.Id products supported.
@@ -42,7 +42,6 @@ data class ReachabilityDetails(
         return Json.encodeToString(this)
     }
 }
-
 
 /**
  * Tru.Id product (API)
@@ -70,4 +69,3 @@ data class ReachabilityError(
     val status: Int,
     val detail: String?
 )
-

@@ -27,14 +27,13 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
-import id.tru.sdk.network.NetworkManager
 import id.tru.sdk.network.CellularNetworkManager
-import id.tru.sdk.network.HttpClient
+import id.tru.sdk.network.NetworkManager
 import id.tru.sdk.network.TraceInfo
-import org.json.JSONObject
 import java.io.IOException
 import java.net.URL
-//import id.tru.android.BuildConfig
+import org.json.JSONObject
+// import id.tru.android.BuildConfig
 
 /**
  * TruSDK main entry point.
@@ -51,9 +50,6 @@ import java.net.URL
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class TruSDK private constructor(context: Context) {
     private val context = context
-    private val httpClient by lazy {
-        HttpClient(context)
-    }
 
     /**
      * Execute a phone check verification, by performing a network request against the Mobile carrier
@@ -145,7 +141,63 @@ class TruSDK private constructor(context: Context) {
      * describing the issue.
      */
     fun isReachable(): ReachabilityDetails? {
-        return httpClient.requestReachability(BuildConfig.TRU_ID_DEVICE_ID_SERVER_URL)
+        Log.d(TAG, "ReachabilityDetails for endpoint:${BuildConfig.TRU_ID_DEVICE_ID_SERVER_URL}")
+        val networkManager: NetworkManager = getCellularNetworkManager()
+        val json: JSONObject? = networkManager.getJSON(url = URL(BuildConfig.TRU_ID_DEVICE_ID_SERVER_URL))
+        var reachabilityDetails: ReachabilityDetails? = null
+        Log.d("TruSDK", "isReachable: $json")
+        if (json != null) {
+            if (json.has("network_id")) {
+                // We have reachability details
+                val country = if (json.has("country_code")) { json.getString("country_code") } else { "" }
+                val networkId = if (json.has("network_id")) { json.getString("network_id") } else { "" }
+                val networkName = if (json.has("network_name")) { json.getString("network_name") } else { "" }
+                val links = if (json.has("_links")) { json.getString("_links") } else { null }
+                val products: ArrayList<Product>? = if (json.has("products")) {
+                    val array = json.getJSONArray("products")
+                    var _prod: ArrayList<Product> = ArrayList<Product>()
+                    for (i in 0 until array.length()) {
+                        val item = array.getJSONObject(i)
+                        val productName = item.getString("product_name")
+                        val productId = item.getString("product_id")
+                        var productType = when (productName) {
+                            ProductType.PhoneCheck.text -> ProductType.PhoneCheck
+                            ProductType.SIMCheck.text -> ProductType.SIMCheck
+                            ProductType.SubscriberCheck.text -> ProductType.SubscriberCheck
+                            else -> ProductType.Unknown
+                        }
+                        _prod.add(Product(productId, productType))
+                    }
+                    _prod
+                } else { null }
+                    reachabilityDetails = ReachabilityDetails(null, country, networkId, networkName, products, links)
+            } else {
+                val title = if (json.has("title")) {
+                    json.getString("title")
+                } else {
+                    null
+                }
+                val type = if (json.has("type")) {
+                    json.getString("type")
+                } else {
+                    null
+                }
+                val status = if (json.has("status")) {
+                    json.getInt("status")
+                } else {
+                    0
+                }
+                val detail = if (json.has("detail")) {
+                    json.getString("detail")
+                } else {
+                    null
+                }
+                var error = ReachabilityError(type, title, status, detail)
+
+                reachabilityDetails = ReachabilityDetails(error, "", "", "", null, null)
+            }
+        }
+        return reachabilityDetails
     }
 
     /**
@@ -167,7 +219,7 @@ class TruSDK private constructor(context: Context) {
     fun getJsonResponse(@NonNull endpoint: String): JSONObject? {
         Log.d(TAG, "getJsonResponse for endpoint:$endpoint")
         val networkManager: NetworkManager = getCellularNetworkManager()
-        return networkManager.requestSync(url = URL(endpoint), method = "GET")
+        return networkManager.getJSON(url = URL(endpoint))
     }
 
     /**
@@ -189,8 +241,9 @@ class TruSDK private constructor(context: Context) {
     @Deprecated("Use isReachable()")
     fun getJsonPropertyValue(@NonNull endpoint: String, @NonNull key: String): String? {
         Log.d(TAG, "getJsonPropertyValue for endpoint:$endpoint key:$key")
-        val jsonResponse = getJsonResponse(endpoint)
-        return jsonResponse?.optString(key)
+        val networkManager: NetworkManager = getCellularNetworkManager()
+        val json: JSONObject? = networkManager.getJSON(url = URL(endpoint))
+        return json?.optString(key)
     }
 
     private fun getCellularNetworkManager(): NetworkManager {
