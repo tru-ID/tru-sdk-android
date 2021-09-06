@@ -26,7 +26,8 @@ import android.os.Build
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.Date
+import java.util.TimeZone
 
 class DateUtils {
 
@@ -48,6 +49,4 @@ class DateUtils {
             }
         }
     }
-
-
 }

@@ -24,7 +24,7 @@ package id.tru.sdk.network
 
 import android.os.Build
 import android.util.Log
-//import id.tru.android.BuildConfig
+// import id.tru.android.BuildConfig
 import id.tru.sdk.BuildConfig
 
 /**
@@ -117,18 +117,18 @@ class DebugInfo {
     @Synchronized
     fun addLog(priority: Int, tag: String, msg: String) {
 
-        if(collectionEnabled) {
+        if (collectionEnabled) {
             bufferMap[DateUtils.now()] = "$tag - $msg"
         }
 
         if (consoleLogsEnabled) {
-            when(priority) {
-                2 -> Log.v(tag, msg)//VERBOSE
-                3 -> Log.d(tag, msg)//DEBUG
-                4 -> Log.i(tag, msg)//INFO
-                5 -> Log.w(tag, msg)//WARN
-                6 -> Log.e(tag, msg)//ERROR
-                else -> { //Fall back to //DEBUG
+            when (priority) {
+                2 -> Log.v(tag, msg) // VERBOSE
+                3 -> Log.d(tag, msg) // DEBUG
+                4 -> Log.i(tag, msg) // INFO
+                5 -> Log.w(tag, msg) // WARN
+                6 -> Log.e(tag, msg) // ERROR
+                else -> { // Fall back to //DEBUG
                     Log.d(tag, msg)
                 }
             }
@@ -157,4 +157,3 @@ fun deviceInfo(): String {
     val versionRelease = Build.VERSION.RELEASE
     return "DeviceInfo: $manufacturer, $model, $version, $versionRelease \n User-Agent: ${userAgent()}\n"
 }
-

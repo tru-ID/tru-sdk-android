@@ -33,8 +33,11 @@ import java.net.URL
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import javax.net.ssl.SSLSocketFactory
+import org.apache.commons.io.IOUtils
+import org.json.JSONException
+import org.json.JSONObject
 
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP) //API Level 21
+@RequiresApi(Build.VERSION_CODES.LOLLIPOP) // API Level 21
 internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollector.instance) {
     private lateinit var socket: Socket
     private lateinit var output: OutputStream
@@ -47,19 +50,45 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
     fun check(url: URL) {
         var redirectURL: URL? = null
         var redirectCount = 0
+        var result: ResultHandler?
         do {
             redirectCount += 1
             val nurl = redirectURL ?: url
             tracer.addDebug(Log.DEBUG, TAG, "Requesting: $nurl")
             startConnection(nurl)
-            redirectURL = sendCommand(nurl)
+            result = sendCommand(nurl)
+            if (result != null && result.getRedirect() != null)
+                redirectURL = result.getRedirect()
+            else
+                redirectURL = null
             stopConnection()
         } while (redirectURL != null && redirectCount <= MAX_REDIRECT_COUNT)
+        if (result?.getBody() != null) {
+            startConnection(url)
+            sendPatchCommand(url, result.getBody())
+            stopConnection()
+        }
         tracer.addDebug(Log.DEBUG, TAG, "Check complete")
     }
 
     fun checkWithTrace(url: URL) {
         check(url = url)
+    }
+
+    fun getJSON(url: URL): JSONObject? {
+        var result: ResultHandler?
+        tracer.addDebug(Log.DEBUG, TAG, "Requesting: $url")
+        startConnection(url)
+        result = sendCommand(url)
+        stopConnection()
+        if (result?.getBody() != null) {
+            try {
+                return JSONObject(result.getBody())
+            } catch (e: JSONException) {
+                tracer.addDebug(Log.ERROR, TAG, "JSONException: $e")
+            }
+        }
+        return null
     }
 
     private fun makeHTTPCommand(url: URL): String {
@@ -78,14 +107,37 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         return cmd.toString()
     }
 
-    private fun sendCommand(url: URL): URL? {
+    private fun sendCommand(url: URL): ResultHandler? {
         val command = makeHTTPCommand(url)
-        return sendRequest(url, command)
+        return sendAndReceive(url, command)
+    }
+
+    fun sendPatchCommand(url: URL, payload: String?): ResultHandler? {
+        val command = makePatchHTTPCommand(url, payload)
+        return sendAndReceive(url, command.toString())
+    }
+
+    private fun makePatchHTTPCommand(url: URL, payload: String?): String {
+        var CRLF = "\r\n"
+        var cmd = StringBuffer()
+        var body: String = "[{\"op\": \"add\",\"path\":\"/payload\",\"value\": " + payload + "}]"
+        cmd.append("PATCH " + url.path)
+        if (url.query != null) {
+            cmd.append("?" + url.query)
+        }
+        cmd.append(" HTTP/1.1$CRLF")
+        cmd.append("Host: " + url.host + CRLF)
+        cmd.append("User-Agent: tru-sdk-android/cookie$CRLF")
+        cmd.append("Accept: */*$CRLF")
+        cmd.append("Content-Type: application/json-patch+json$CRLF")
+        cmd.append("Content-Length: " + body.length + "$CRLF")
+        cmd.append("$CRLF" + body)
+        return cmd.toString()
     }
 
     private fun startConnection(url: URL) {
         var port = 80
-        if (url.port > 0 ) port = url.port
+        if (url.port > 0) port = url.port
         tracer.addDebug(Log.DEBUG, TAG, "start : ${url.host} ${url.port} ${url.protocol}")
         tracer.addTrace("\nStart connection ${url.host} ${url.port} ${url.protocol} ${DateUtils.now()}\n")
         socket = if (url.protocol == "https") {
@@ -103,55 +155,87 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         tracer.addTrace("Connected ${DateUtils.now()}\n")
     }
 
-    private fun sendRequest(requestURL: URL, message: String): URL? {
+    private fun sendAndReceive(requestURL: URL, message: String): ResultHandler? {
         tracer.addDebug(Log.DEBUG, TAG, "Client sending \n$message\n")
         tracer.addTrace(message)
         val bytesOfRequest: ByteArray =
-            message.toByteArray(Charset.forName(StandardCharsets.UTF_8.name()))
+                message.toByteArray(Charset.forName(StandardCharsets.UTF_8.name()))
         output.write(bytesOfRequest)
         output.flush()
 
         tracer.addDebug(Log.DEBUG, TAG, "Response " + "\n")
         tracer.addTrace("Response - ${DateUtils.now()} \n")
-
-        while (socket.isConnected) {
-            var line = input.readLine();
-            if (line != null) {
+        var status: Int = 0
+        var body: String? = null
+        var type: String = ""
+        var result: ResultHandler? = null
+        var bodyBegin: Boolean = false
+        // convert the entire stream in a String
+        var response: String? = IOUtils.toString(input)
+        response?.let {
+            val lines = response.split("\n")
+            for (line in lines) {
                 tracer.addDebug(Log.DEBUG, TAG, line)
                 tracer.addTrace(line)
                 if (line.startsWith("HTTP/")) {
                     val parts = line.split(" ")
                     if (parts.isNotEmpty() && parts.size >= 2) {
-                        val status = Integer.valueOf(parts[1])
-                        tracer.addDebug(Log.DEBUG, TAG, "status: ${status}\n")
-                        if (status < 300 || status > 310) {
-                            tracer.addDebug(Log.DEBUG, TAG, "Status - $status")
-                            tracer.addTrace("Status - $status ${DateUtils.now()}\n")
+                        val s = Integer.valueOf(parts[1])
+                        tracer.addDebug(Log.DEBUG, TAG, "status: ${s}\n")
+                        if (s == 200) {
+                            status = s
+                            continue
+                        } else if (s < 300 || s > 310) {
+                            tracer.addDebug(Log.DEBUG, TAG, "Status - $s")
+                            tracer.addTrace("Status - $s ${DateUtils.now()}\n")
                             break
                         }
                     }
-                } else if (line.contains("ocation:")) {
-                    return parseRedirect(requestURL, line)
+                } else if (line.contains("Location:") || line.contains("location:")) {
+                    result = parseRedirect(requestURL, line.replace("\r", ""))
+                } else if (line.contains("Content-Type:")) {
+                    var parts = line.split(" ")
+                    if (!parts.isEmpty() && parts.size == 2) {
+                        type = parts[1].replace("\r", "")
+                    }
+                } else if (status == 200 && ("application/json".equals(type) || "application/hal+json".equals(type)) && line.equals("\r")) {
+                    bodyBegin = true
+                } else if (bodyBegin) {
+                    body = if (body != null) body + line.replace("\r", "") else line.replace("\r", "")
+                    tracer.addDebug(Log.DEBUG, TAG, "Adding to body - $body\n")
                 }
-            } else {
-                tracer.addDebug(Log.ERROR, TAG, "Error reading the response.")
-                break
             }
+            tracer.addDebug(Log.DEBUG, TAG, "Status - $status\nBody - $body\n")
+            tracer.addTrace("Status - $status ${DateUtils.now()}\nBody - $body\n")
+            if (status == 200 && body != "") {
+                result = ResultHandler(null, parseBodyIntoJSONString(body))
+            }
+        }
+        return result
+    }
+
+    fun parseBodyIntoJSONString(body: String?): String? {
+        if (body != null) {
+            val start = body.indexOf("{")
+            var end = body.lastIndexOf("}")
+            var json = body.subSequence(start, end + 1).toString()
+            println("json: ${json}\n")
+            return json
         }
         return null
     }
 
-    fun parseRedirect(requestURL: URL, redirectLine: String): URL? {
+    fun parseRedirect(requestURL: URL, redirectLine: String): ResultHandler? {
         var parts = redirectLine.split(" ")
         if (parts.isNotEmpty() && parts.size > 1) {
             if (parts[1].isBlank()) return null
             val redirect = parts[1]
-            if(!redirect.startsWith("http")) { //http & https
-                return URL(requestURL, redirect)
+            if (!redirect.startsWith("http")) { // http & https
+                return ResultHandler(URL(requestURL, redirect), null)
             }
             tracer.addDebug(Log.DEBUG, TAG, "Found redirect")
             tracer.addTrace("Found redirect - ${DateUtils.now()} \n")
-            return URL(redirect);
+            return ResultHandler(URL(redirect), null)
         }
         return null
     }
@@ -171,5 +255,18 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         private const val TAG = "CellularClient"
         private const val HEADER_USER_AGENT = "User-Agent"
         private const val MAX_REDIRECT_COUNT = 10
+    }
+
+        class ResultHandler(redirect: URL?, body: String?) {
+        val r: URL? = redirect
+        val b: String? = body
+
+        fun getRedirect(): URL? {
+            return r
+        }
+
+        fun getBody(): String? {
+            return b
+        }
     }
 }
