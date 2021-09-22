@@ -47,7 +47,7 @@ data class ReachabilityDetails(
  * Tru.Id product (API)
  */
 @Serializable
-data class Product(val productId: String, val productType: ProductType)
+data class Product(val productId: String, val productType: String)
 
 /**
  * Types of Tru.Id products

@@ -161,12 +161,12 @@ class TruSDK private constructor(context: Context) {
                         val productName = item.getString("product_name")
                         val productId = item.getString("product_id")
                         var productType = when (productName) {
-                            ProductType.PhoneCheck.text -> ProductType.PhoneCheck
-                            ProductType.SIMCheck.text -> ProductType.SIMCheck
-                            ProductType.SubscriberCheck.text -> ProductType.SubscriberCheck
+                            ProductType.PhoneCheck.text -> ProductType.PhoneCheck.text
+                            ProductType.SIMCheck.text -> ProductType.SIMCheck.text
+                            ProductType.SubscriberCheck.text -> ProductType.SubscriberCheck.text
                             else -> ProductType.Unknown
                         }
-                        _prod.add(Product(productId, productType))
+                        _prod.add(Product(productId, String()))
                     }
                     _prod
                 } else { null }
