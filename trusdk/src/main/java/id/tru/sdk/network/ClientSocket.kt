@@ -108,7 +108,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         cmd.append(CRLF)
         val userAgent = userAgent()
         cmd.append("$HEADER_USER_AGENT: $userAgent$CRLF")
-        cmd.append("Accept: */*$CRLF")
+        cmd.append("Accept: text/html, application/xhtml+xml, application/xml, */*$CRLF")
         cmd.append("Connection: close$CRLF$CRLF")
         return cmd.toString()
     }
