@@ -17,6 +17,7 @@ build.gradle -> dependencies add
 
 ```
     implementation 'id.tru.sdk:tru-sdk-android:0.2.6'
+    implementation 'commons-io:commons-io:2.4'
 ```
 
 Compatibility
