@@ -99,10 +99,16 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
             cmd.append("?" + url.query)
         }
         cmd.append(" HTTP/1.1$CRLF")
-        cmd.append("Host: " + url.host + CRLF)
+        cmd.append("Host: " + url.host)
+        if (url.protocol == "https" && url.port > 0 && url.port != 443) {
+            cmd.append(":" + url.port)
+        } else if (url.protocol == "http" && url.port > 0 && url.port != 80) {
+            cmd.append(":" + url.port)
+        }
+        cmd.append(CRLF)
         val userAgent = userAgent()
         cmd.append("$HEADER_USER_AGENT: $userAgent$CRLF")
-        cmd.append("Accept: */*$CRLF")
+        cmd.append("Accept: text/html,application/xhtml+xml,application/xml,*/*$CRLF")
         cmd.append("Connection: close$CRLF$CRLF")
         return cmd.toString()
     }
@@ -126,8 +132,15 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
             cmd.append("?" + url.query)
         }
         cmd.append(" HTTP/1.1$CRLF")
-        cmd.append("Host: " + url.host + CRLF)
-        cmd.append("User-Agent: tru-sdk-android/cookie$CRLF")
+        cmd.append("Host: " + url.host)
+        if (url.protocol == "https" && url.port > 0 && url.port != 443) {
+            cmd.append(":" + url.port)
+        } else if (url.protocol == "http" && url.port > 0 && url.port != 80) {
+            cmd.append(":" + url.port)
+        }
+        cmd.append(CRLF)
+        val userAgent = userAgent()
+        cmd.append("$HEADER_USER_AGENT: $userAgent$CRLF")
         cmd.append("Accept: */*$CRLF")
         cmd.append("Content-Type: application/json-patch+json$CRLF")
         cmd.append("Content-Length: " + body.length + "$CRLF")

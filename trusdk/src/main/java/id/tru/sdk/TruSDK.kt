@@ -33,7 +33,6 @@ import id.tru.sdk.network.TraceInfo
 import java.io.IOException
 import java.net.URL
 import org.json.JSONObject
-// import id.tru.android.BuildConfig
 
 /**
  * TruSDK main entry point.
@@ -160,13 +159,7 @@ class TruSDK private constructor(context: Context) {
                         val item = array.getJSONObject(i)
                         val productName = item.getString("product_name")
                         val productId = item.getString("product_id")
-                        var productType = when (productName) {
-                            ProductType.PhoneCheck.text -> ProductType.PhoneCheck
-                            ProductType.SIMCheck.text -> ProductType.SIMCheck
-                            ProductType.SubscriberCheck.text -> ProductType.SubscriberCheck
-                            else -> ProductType.Unknown
-                        }
-                        _prod.add(Product(productId, productType))
+                        _prod.add(Product(productId, productName))
                     }
                     _prod
                 } else { null }

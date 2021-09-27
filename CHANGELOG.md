@@ -3,6 +3,14 @@
 
 Change Log
 ==========
+## Version 0.2.7
+_2021-09-27_
+
+**Bug Fix**
+- `isReachable` method product mapping
+- better custom port handling
+- Accept header for navigation request
+
 ## Version 0.2.6
 _2021-09-06_
 

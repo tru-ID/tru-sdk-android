@@ -58,7 +58,7 @@ publishing {
         aar(MavenPublication) {
             groupId = 'id.tru.sdk'
             artifactId = 'tru-sdk-android'
-            version = '0.2.6'
+            version = '0.2.7'
             artifact("$buildDir/outputs/aar/${project.name}-release.aar")
         }
     }
