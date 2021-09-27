@@ -47,19 +47,10 @@ data class ReachabilityDetails(
  * Tru.Id product (API)
  */
 @Serializable
-data class Product(val productId: String, val productType: String)
+data class Product(val productId: String, val productName: String)
 
 /**
- * Types of Tru.Id products
- */
-enum class ProductType(val text: String) {
-    PhoneCheck("Phone Check"),
-    SIMCheck("Sim Check"),
-    SubscriberCheck("Subscriber Check"),
-    Unknown("Unknown")
-}
 
-/**
  * If the isReachable() request is not done via cellular network, this class represents the error.
  */
 @Serializable
