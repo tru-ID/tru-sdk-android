@@ -17,7 +17,7 @@ class ReachabilityDetailsTest {
             link = "_links")
 
         val expectedValue =
-            """{"error":{"type":"HTTP","title":"Redirect","status":302,"detail":"Some description"},"countryCode":"GB","networkId":"2334","networkName":"EE","products":[{"productId":"Product654","productName":"Sim Check"}],"link":"_links"}"""
+            """{"error":{"type":"HTTP","title":"Redirect","status":302,"detail":"Some description"},"country_code":"GB","network_id":"2334","network_name":"EE","products":[{"product_id":"Product654","product_name":"Sim Check"}],"link":"_links"}"""
         val actualValue = reachabilityDetails.toJsonString()
         TestCase.assertEquals(expectedValue, actualValue)
     }
@@ -34,7 +34,7 @@ class ReachabilityDetailsTest {
             link = "_links")
 
         val expectedValue =
-            """{"error":{"type":"HTTP","title":"Redirect","status":302,"detail":"Some description"},"countryCode":"","networkId":"","networkName":"","products":[{"productId":"Product654","productName":"Sim Check"}],"link":"_links"}"""
+            """{"error":{"type":"HTTP","title":"Redirect","status":302,"detail":"Some description"},"country_code":"","network_id":"","network_name":"","products":[{"product_id":"Product654","product_name":"Sim Check"}],"link":"_links"}"""
         val actualValue = reachabilityDetails.toJsonString()
         TestCase.assertEquals(expectedValue, actualValue)
     }
