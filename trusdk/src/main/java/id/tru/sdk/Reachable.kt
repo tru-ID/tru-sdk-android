@@ -22,6 +22,7 @@
  */
 package id.tru.sdk
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -32,12 +33,12 @@ import kotlinx.serialization.json.Json
 @Serializable
 data class ReachabilityDetails(
     val error: ReachabilityError?,
-    val countryCode: String,
-    val networkId: String,
-    val networkName: String,
+    @SerialName("country_code") val countryCode: String,
+    @SerialName("network_id") val networkId: String,
+    @SerialName("network_name") val networkName: String,
     val products: ArrayList<Product>?,
-    val link: String?
-) {
+    val link: String?,
+    ) {
     fun toJsonString(): String {
         return Json.encodeToString(this)
     }
@@ -47,7 +48,10 @@ data class ReachabilityDetails(
  * Tru.Id product (API)
  */
 @Serializable
-data class Product(val productId: String, val productName: String)
+data class Product(
+    @SerialName("product_id") val productId: String,
+    @SerialName("product_name") val productName: String
+    )
 
 /**
 

@@ -3,6 +3,12 @@
 
 Change Log
 ==========
+## Version 0.2.8
+_2021-10-07_
+
+**Bug Fix**
+- `ReachabilityDetails` result converted to snake_case
+
 ## Version 0.2.7
 _2021-09-27_
 
