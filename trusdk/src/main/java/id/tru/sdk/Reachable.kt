@@ -37,8 +37,8 @@ data class ReachabilityDetails(
     @SerialName("network_id") val networkId: String,
     @SerialName("network_name") val networkName: String,
     val products: ArrayList<Product>?,
-    val link: String?,
-    ) {
+    val link: String?
+) {
     fun toJsonString(): String {
         return Json.encodeToString(this)
     }
@@ -51,7 +51,7 @@ data class ReachabilityDetails(
 data class Product(
     @SerialName("product_id") val productId: String,
     @SerialName("product_name") val productName: String
-    )
+)
 
 /**
 

@@ -136,13 +136,18 @@ class TruSDK private constructor(context: Context) {
      * Executes a network call to find out about the details of the network, mobile carrier etc. in order to determine
      * if tru.ID has reachability for the network.
      *
+     * @param dataResidency your tru.ID data residency
+     *
      * @return [ReachabilityDetails] which may contain the details of the mobile carrier or an error
      * describing the issue.
      */
-    fun isReachable(): ReachabilityDetails? {
-        Log.d(TAG, "ReachabilityDetails for endpoint:${BuildConfig.TRU_ID_DEVICE_ID_SERVER_URL}")
+    fun isReachable(dataResidency: String?): ReachabilityDetails? {
+        var geo = "eu"
+        if (dataResidency != null && dataResidency.length == 2) geo = dataResidency.lowercase()
+        val endpoint = String.format(BuildConfig.TRU_ID_DEVICE_ID_SERVER_URL, geo)
+        Log.d(TAG, "ReachabilityDetails for endpoint:$endpoint")
         val networkManager: NetworkManager = getCellularNetworkManager()
-        val json: JSONObject? = networkManager.getJSON(url = URL(BuildConfig.TRU_ID_DEVICE_ID_SERVER_URL))
+        val json: JSONObject? = networkManager.getJSON(url = URL(endpoint))
         var reachabilityDetails: ReachabilityDetails? = null
         Log.d("TruSDK", "isReachable: $json")
         if (json != null) {
@@ -191,6 +196,17 @@ class TruSDK private constructor(context: Context) {
             }
         }
         return reachabilityDetails
+    }
+
+    /**
+     * Executes a network call to find out about the details of the network, mobile carrier etc. in order to determine
+     * if tru.ID has reachability for the network.
+     *
+     * @return [ReachabilityDetails] which may contain the details of the mobile carrier or an error
+     * describing the issue.
+     */
+    fun isReachable(): ReachabilityDetails? {
+        return isReachable(dataResidency = null)
     }
 
     /**

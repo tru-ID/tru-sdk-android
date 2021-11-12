@@ -24,7 +24,7 @@ class ReachabilityDetailsTest {
 
     @Test
     fun GIVEN_Reachability_Has_Missing_Details_THEN_Test_Should_Not_Fail() {
-        val product1 = Product(productId = "Product654", productName =  "Sim Check")
+        val product1 = Product(productId = "Product654", productName = "Sim Check")
         val reachabilityDetails = ReachabilityDetails(
             error = ReachabilityError("HTTP", "Redirect", 302, "Some description"),
             countryCode = "",

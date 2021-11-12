@@ -3,6 +3,12 @@
 
 Change Log
 ==========
+## Version 0.2.9
+_2021-11-12_
+
+**New**
+- `isReachable` support for custom data residency
+
 ## Version 0.2.8
 _2021-10-07_
 
