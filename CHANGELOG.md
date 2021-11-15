@@ -3,6 +3,12 @@
 
 Change Log
 ==========
+## Version 0.2.10
+_2021-11-15_
+
+**Changes**
+- internal enhancement
+
 ## Version 0.2.9
 _2021-11-12_
 

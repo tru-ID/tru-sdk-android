@@ -47,8 +47,8 @@ import org.json.JSONObject
  * ```
  */
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-class TruSDK private constructor(context: Context) {
-    private val context = context
+class TruSDK private constructor(networkManager: CellularNetworkManager) {
+    private val networkManager: NetworkManager = networkManager
 
     /**
      * Execute a phone check verification, by performing a network request against the Mobile carrier
@@ -256,18 +256,21 @@ class TruSDK private constructor(context: Context) {
     }
 
     private fun getCellularNetworkManager(): NetworkManager {
-        return CellularNetworkManager(context)
+        return networkManager
     }
 
     companion object {
         private const val TAG = "TruSDK"
         private var instance: TruSDK? = null
+        private var currentContext: Context? = null
 
         @Synchronized
         fun initializeSdk(context: Context): TruSDK {
             var currentInstance = instance
-            if (null == currentInstance) {
-                currentInstance = TruSDK(context)
+            if (null == currentInstance || currentContext != context) {
+                val nm = CellularNetworkManager(context)
+                currentContext = context
+                currentInstance = TruSDK(nm)
             }
             instance = currentInstance
             return currentInstance
