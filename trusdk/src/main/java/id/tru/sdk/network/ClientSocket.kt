@@ -100,9 +100,9 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         }
         cmd.append(" HTTP/1.1$CRLF")
         cmd.append("Host: " + url.host)
-        if (url.protocol == "https" && url.port > 0 && url.port != 443) {
+        if (url.protocol == "https" && url.port > 0 && url.port != PORT_443) {
             cmd.append(":" + url.port)
-        } else if (url.protocol == "http" && url.port > 0 && url.port != 80) {
+        } else if (url.protocol == "http" && url.port > 0 && url.port != PORT_80) {
             cmd.append(":" + url.port)
         }
         cmd.append(CRLF)
@@ -133,9 +133,9 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         }
         cmd.append(" HTTP/1.1$CRLF")
         cmd.append("Host: " + url.host)
-        if (url.protocol == "https" && url.port > 0 && url.port != 443) {
+        if (url.protocol == "https" && url.port > 0 && url.port != PORT_443) {
             cmd.append(":" + url.port)
-        } else if (url.protocol == "http" && url.port > 0 && url.port != 80) {
+        } else if (url.protocol == "http" && url.port > 0 && url.port != PORT_80) {
             cmd.append(":" + url.port)
         }
         cmd.append(CRLF)
@@ -149,12 +149,12 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
     }
 
     private fun startConnection(url: URL) {
-        var port = 80
+        var port = PORT_80
         if (url.port > 0) port = url.port
         tracer.addDebug(Log.DEBUG, TAG, "start : ${url.host} ${url.port} ${url.protocol}")
         tracer.addTrace("\nStart connection ${url.host} ${url.port} ${url.protocol} ${DateUtils.now()}\n")
         socket = if (url.protocol == "https") {
-            port = 443
+            port = PORT_443
             if (url.port > 0) port = url.port
             SSLSocketFactory.getDefault().createSocket(url.host, port)
         } else {
@@ -232,7 +232,6 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
             val start = body.indexOf("{")
             var end = body.lastIndexOf("}")
             var json = body.subSequence(start, end + 1).toString()
-            println("json: ${json}\n")
             return json
         }
         return null
@@ -268,6 +267,8 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         private const val TAG = "CellularClient"
         private const val HEADER_USER_AGENT = "User-Agent"
         private const val MAX_REDIRECT_COUNT = 10
+        private const val PORT_80 = 80
+        private const val PORT_443 = 443
     }
 
         class ResultHandler(redirect: URL?, body: String?) {
