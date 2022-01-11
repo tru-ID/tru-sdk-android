@@ -3,11 +3,17 @@
 
 Change Log
 ==========
+## Version 0.2.11
+_2022-01-11_
+
+**Changes**
+- Internal refactoring
+
 ## Version 0.2.10
 _2021-11-15_
 
 **Changes**
-- internal enhancement
+- Internal enhancement
 
 ## Version 0.2.9
 _2021-11-12_
@@ -26,7 +32,7 @@ _2021-09-27_
 
 **Bug Fix**
 - `isReachable` method product mapping
-- better custom port handling
+- Better custom port handling
 - Accept header for navigation request
 
 ## Version 0.2.6

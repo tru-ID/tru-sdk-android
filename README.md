@@ -16,7 +16,7 @@ https://gitlab.com/api/v4/projects/22035475/packages/maven
 build.gradle -> dependencies add
 
 ```
-    implementation 'id.tru.sdk:tru-sdk-android:0.2.10'
+    implementation 'id.tru.sdk:tru-sdk-android:0.2.11'
     implementation 'commons-io:commons-io:2.4'
 ```
 
