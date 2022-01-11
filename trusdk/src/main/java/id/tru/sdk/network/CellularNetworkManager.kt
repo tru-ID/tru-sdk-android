@@ -96,7 +96,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
                 // - Redirects may be HTTP rather than HTTPs, as OkHTTP will raise Exception for clearText
                 // - We are not interested in the full response body, headers etc.
                 val cs = ClientSocket()
-                cs.check(url)
+                cs.check(url, getOperator())
             } else {
                 tracer.addDebug(Log.DEBUG, TAG, "We do not have a path")
             }
@@ -130,9 +130,8 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
                 // However, user may still have no data plan!
                 // Phone Check needs to be done on a socket for 2 reasons:
                 // - Redirects may be HTTP rather than HTTPs, as OkHTTP will raise Exception for clearText
-                // - We are not interested in the full response body, headers etc.
                 val cs = ClientSocket()
-                json = cs.getJSON(url)
+                json = cs.getJSON(url, getOperator())
             } else {
                 tracer.addDebug(Log.DEBUG, TAG, "We do not have a path")
             }
@@ -184,8 +183,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
     private fun forceCellular(
         capabilities: IntArray,
         transportTypes: IntArray,
-        onCompletion: (isSuccess: Boolean) -> Unit
-    ) {
+        onCompletion: (isSuccess: Boolean) -> Unit) {
 
         tracer.addDebug(Log.DEBUG, TAG, "------ Forcing Cellular ------")
 
@@ -274,6 +272,20 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
             // Perhaps there is already one registered, and in progress or waiting to be timed out
             tracer.addDebug(Log.DEBUG, TAG, "There is already a Listener registered.")
         }
+    }
+
+    /**
+     * Return the Country Code of the Carrier + MCC + MNC
+     * in uppercase
+     */
+    private fun getOperator(): String?  {
+        if (cellularInfo.phoneType == TelephonyManager.PHONE_TYPE_GSM ) {
+            val op: String = cellularInfo.simOperator
+            tracer.addDebug(Log.DEBUG, TAG, "-> getOperator ${op}")
+            return op
+        } else
+            tracer.addDebug(Log.DEBUG, TAG,"-> getOperator not PHONE_TYPE_GSM!")
+        return null
     }
 
     private fun switchToAvailableNetwork() {
