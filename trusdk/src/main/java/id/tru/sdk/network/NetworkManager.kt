@@ -26,7 +26,7 @@ import java.net.URL
 import org.json.JSONObject
 
 internal interface NetworkManager {
-    fun check(url: URL): Boolean
+    fun check(url: URL): JSONObject?
     fun checkWithTrace(url: URL): TraceInfo
     fun getJSON(url: URL): JSONObject?
 }

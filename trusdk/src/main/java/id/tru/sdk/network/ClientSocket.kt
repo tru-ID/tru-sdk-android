@@ -47,43 +47,28 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
      * To be used for phoneCheck.
      * Sends an HTTP/HTTPS request over a Socket, and follows redirects up to MAX_REDIRECT_COUNT.
      */
-    fun check(url: URL, operator: String?) {
+    fun check(url: URL, operator: String?): JSONObject? {
         var redirectURL: URL? = null
         var redirectCount = 0
-        var result: ResultHandler?
+        var result: ResultHandler? = null
         do {
             redirectCount += 1
             val nurl = redirectURL ?: url
             tracer.addDebug(Log.DEBUG, TAG, "Requesting: $nurl")
-            startConnection(nurl)
-            if (redirectCount == 1)
-                result = sendCommand(nurl, operator)
-            else
-                result = sendCommand(nurl, null)
-            if (result != null && result.getRedirect() != null)
-                redirectURL = result.getRedirect()
-            else
-                redirectURL = null
-            stopConnection()
+            if (startConnection(nurl)) {
+                if (redirectCount == 1)
+                    result = sendCommand(nurl, operator, null)
+                else
+                    result = sendCommand(nurl, null, result?.getCookies())
+                if (result != null && result.getRedirect() != null)
+                    redirectURL = result.getRedirect()
+                else
+                    redirectURL = null
+                stopConnection()
+            } else
+                tracer.addDebug(Log.DEBUG, TAG, "Cannot start connection: $nurl")
         } while (redirectURL != null && redirectCount <= MAX_REDIRECT_COUNT)
-        if (result?.getBody() != null) {
-            startConnection(url)
-            sendPatchCommand(url, result.getBody())
-            stopConnection()
-        }
         tracer.addDebug(Log.DEBUG, TAG, "Check complete")
-    }
-
-    fun checkWithTrace(url: URL, operator: String?) {
-        check(url = url, operator = operator)
-    }
-
-    fun getJSON(url: URL, operator: String?): JSONObject? {
-        var result: ResultHandler?
-        tracer.addDebug(Log.DEBUG, TAG, "Requesting: $url")
-        startConnection(url)
-        result = sendCommand(url, operator)
-        stopConnection()
         if (result?.getBody() != null) {
             try {
                 return JSONObject(result.getBody())
@@ -94,7 +79,25 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         return null
     }
 
-    private fun makeHTTPCommand(url: URL, operator: String?): String {
+    fun getJSON(url: URL, operator: String?): JSONObject? {
+        var result: ResultHandler?
+        tracer.addDebug(Log.DEBUG, TAG, "Requesting: $url")
+        if (startConnection(url)) {
+            result = sendCommand(url, operator, null)
+            stopConnection()
+            if (result?.getBody() != null) {
+                try {
+                    return JSONObject(result.getBody())
+                } catch (e: JSONException) {
+                    tracer.addDebug(Log.ERROR, TAG, "JSONException: $e")
+                }
+            }
+        } else
+            tracer.addDebug(Log.DEBUG, TAG, "Cannot start connection: $url")
+        return null
+    }
+
+    private fun makeHTTPCommand(url: URL, operator: String?, cookies: ArrayList<String>?): String {
         val CRLF = "\r\n"
         val cmd = StringBuffer()
         cmd.append("GET " + url.path)
@@ -114,12 +117,20 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         if (operator != null)
             cmd.append("x-tru-ops: ${operator}$CRLF")
         cmd.append("Accept: text/html,application/xhtml+xml,application/xml,*/*$CRLF")
+        var cs = StringBuffer()
+        val iterator = cookies.orEmpty().listIterator()
+        for (cookie in iterator) {
+            cs.append(cookie)
+            if (iterator.hasNext()) cs.append("; ")
+        }
+        if (cs.length>1) cmd.append("Cookie: "+cs.toString()+"$CRLF")
+
         cmd.append("Connection: close$CRLF$CRLF")
         return cmd.toString()
     }
 
-    private fun sendCommand(url: URL, operator: String?): ResultHandler? {
-        val command = makeHTTPCommand(url, operator)
+    private fun sendCommand(url: URL, operator: String?, cookies: ArrayList<String>?): ResultHandler? {
+        val command = makeHTTPCommand(url, operator, cookies)
         return sendAndReceive(url, command)
     }
 
@@ -153,7 +164,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         return cmd.toString()
     }
 
-    private fun startConnection(url: URL) {
+    private fun startConnection(url: URL) : Boolean {
         var port = PORT_80
         if (url.port > 0) port = url.port
         tracer.addDebug(Log.DEBUG, TAG, "start : ${url.host} ${url.port} ${url.protocol}")
@@ -166,14 +177,19 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
             } else {
                 Socket(url.host, port)
             }
+            tracer.addDebug(Log.DEBUG, TAG, "Client created : ${socket.inetAddress.hostAddress} ${socket.port}")
+            socket.soTimeout = 5*1000
             output = socket.getOutputStream()
             input = BufferedReader(InputStreamReader(socket.inputStream))
 
             tracer.addDebug(Log.DEBUG, TAG, "Client connected : ${socket.inetAddress.hostAddress} ${socket.port}")
             tracer.addTrace("Connected ${DateUtils.now()}\n")
+            return true
         } catch (ex: Exception) {
             tracer.addDebug(Log.DEBUG, TAG, "Client exception : ${ex.message}")
             tracer.addTrace("Client exception ${ex.message}\n")
+            socket.close()
+            return false
         }
     }
 
@@ -196,6 +212,8 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         var type: String = ""
         var result: ResultHandler? = null
         var bodyBegin: Boolean = false
+        var cookies: ArrayList<String> = ArrayList<String>()
+
         try {
             // convert the entire stream in a String
             var response: String? = IOUtils.toString(input)
@@ -207,24 +225,32 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
                     if (line.startsWith("HTTP/")) {
                         val parts = line.split(" ")
                         if (parts.isNotEmpty() && parts.size >= 2) {
-                            val s = Integer.valueOf(parts[1])
-                            tracer.addDebug(Log.DEBUG, TAG, "status: ${s}\n")
-                            if (s == 200) {
-                                status = s
+                            status = Integer.valueOf(parts[1])
+                            tracer.addDebug(Log.DEBUG, TAG, "Status - $status")
+                            tracer.addTrace("Status - $status ${DateUtils.now()}\n")
+                            if (status == 200) {
                                 continue
-                            } else if (s < 300 || s > 310) {
-                                tracer.addDebug(Log.DEBUG, TAG, "Status - $s")
-                                tracer.addTrace("Status - $s ${DateUtils.now()}\n")
+                            } else if (status < 300 || status > 310) {
                                 break
                             }
                         }
+                    } else if (line.contains("Set-Cookie:") || line.contains("set-cookie:")) {
+                        val parts: List<String> = line.split(" ")
+                        if (!parts.isEmpty() && parts.size>1) {
+                            var cookie: String = parts[1]
+                            cookie = cookie.replace(";","")
+                            cookies.add(cookie)
+                            tracer.addDebug(Log.DEBUG, TAG, "cookie - $cookie")
+                            tracer.addTrace("cookie - $cookie\n")
+                        }
                     } else if (line.contains("Location:") || line.contains("location:")) {
-                        result = parseRedirect(requestURL, line.replace("\r",""))
+                        result = parseRedirect(requestURL, line.replace("\r",""), cookies)
                     } else if (line.contains("Content-Type:")) {
                         var parts = line.split(" ")
-                        if (!parts.isEmpty() && parts.size==2) {
-                            type = parts[1].replace("\r","")
+                        if (!parts.isEmpty() && parts.size>1) {
+                            type = parts[1].replace(";","").replace("\r","")
                         }
+                        tracer.addDebug(Log.DEBUG, TAG, "Type - $type\n")
                     } else if (status == 200 && ("application/json".equals(type) || "application/hal+json".equals(type)) && line.equals("\r")) {
                         bodyBegin = true
                     } else if ( bodyBegin ) {
@@ -235,7 +261,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
                 tracer.addDebug(Log.DEBUG, TAG, "Status - $status\nBody - $body\n")
                 tracer.addTrace("Status - $status ${DateUtils.now()}\nBody - $body\n")
                 if (status == 200 && body != "") {
-                    result = ResultHandler(null, parseBodyIntoJSONString(body))
+                    result = ResultHandler(null, parseBodyIntoJSONString(body), cookies)
                 }
             }
         } catch (ex: Exception) {
@@ -255,17 +281,21 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         return null
     }
 
-    fun parseRedirect(requestURL: URL, redirectLine: String): ResultHandler? {
-        var parts = redirectLine.split(" ")
+    fun parseRedirect(requestURL: URL, redirectLine: String, cookies: ArrayList<String>?): ResultHandler? {
+        tracer.addDebug(Log.DEBUG, TAG, "parseRedirect : ${redirectLine}")
+        var parts = redirectLine.split("ocation: ")
         if (parts.isNotEmpty() && parts.size > 1) {
             if (parts[1].isBlank()) return null
             val redirect = parts[1]
-            if (!redirect.startsWith("http")) { // http & https
-                return ResultHandler(URL(requestURL, redirect), null)
+            // some location header are not properly encoded
+            var cleanRedirect = redirect.replace(" ", "+")
+            tracer.addDebug(Log.DEBUG, TAG, "cleanRedirect : ${cleanRedirect}")
+            if (!cleanRedirect.startsWith("http")) { // http & https
+                return ResultHandler(URL(requestURL, cleanRedirect), null, cookies)
             }
             tracer.addDebug(Log.DEBUG, TAG, "Found redirect")
             tracer.addTrace("Found redirect - ${DateUtils.now()} \n")
-            return ResultHandler(URL(redirect), null)
+            return ResultHandler(URL(cleanRedirect), null, cookies)
         }
         return null
     }
@@ -289,9 +319,10 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         private const val PORT_443 = 443
     }
 
-        class ResultHandler(redirect: URL?, body: String?) {
+    class ResultHandler(redirect: URL?, body: String?, cookies: ArrayList<String>?) {
         val r: URL? = redirect
         val b: String? = body
+        val cs: ArrayList<String>? = cookies
 
         fun getRedirect(): URL? {
             return r
@@ -300,5 +331,10 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         fun getBody(): String? {
             return b
         }
+
+        fun getCookies(): ArrayList<String>? {
+            return cs
+        }
+
     }
 }

@@ -25,6 +25,7 @@ package id.tru.sdk.network
 import android.os.Build
 import android.util.Log
 import id.tru.sdk.BuildConfig
+import org.json.JSONObject
 
 /**
  * Collects trace and debugging information for each `check` session.
@@ -32,9 +33,9 @@ import id.tru.sdk.BuildConfig
 class TraceCollector private constructor() {
     private val debugInfo = DebugInfo()
     private val trace by lazy { StringBuilder() }
+    private var responseBody: JSONObject? = null
 
     private var isTraceEnabled = false
-    var isTraceCollectedOnCellularNetwork = false
 
     @Synchronized
     fun shouldLogDebugInfoToConsole(value: Boolean) {
@@ -62,7 +63,7 @@ class TraceCollector private constructor() {
     }
 
     fun getTrace(): TraceInfo {
-        return TraceInfo(trace.toString(), debugInfo)
+        return TraceInfo(trace.toString(), debugInfo, responseBody)
     }
 
     @Synchronized
@@ -79,12 +80,20 @@ class TraceCollector private constructor() {
         return debugInfo
     }
 
+    fun addResponseBody(body: JSONObject?) {
+        responseBody = body
+    }
+
+    fun getResponseBody(): JSONObject? {
+        return responseBody
+    }
+
     companion object {
         val instance: TraceCollector by lazy { TraceCollector() }
     }
 }
 
-data class TraceInfo(val trace: String, val debugInfo: DebugInfo)
+data class TraceInfo(val trace: String, val debugInfo: DebugInfo, val responseBody: JSONObject?)
 
 class DebugInfo {
     private val bufferMap by lazy { mutableMapOf<String, String>() }

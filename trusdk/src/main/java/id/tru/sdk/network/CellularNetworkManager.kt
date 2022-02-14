@@ -35,13 +35,13 @@ import android.os.Looper
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.annotation.RequiresApi
+import org.json.JSONObject
 import java.net.URL
 import java.util.Timer
 import java.util.TimerTask
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.schedule
 import kotlin.concurrent.withLock
-import org.json.JSONObject
 
 /**
  * CellularNetworkManager requests Cellular Network from the system to be available to
@@ -74,14 +74,9 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
 
     private val tracer = TraceCollector.instance
 
-    /**
-     * Request the @param url on the mobile device over the mobile data connection, and follow redirects.
-     * The redirect may contain URL whose protocol may be HTTP or HTTP.
-     * @param url to be requested
-     * @return A true if the request was successfully made on a cellular network, otherwise false
-     */
-    override fun check(url: URL): Boolean {
+    override fun check(url: URL): JSONObject? {
         var calledOnCellularNetwork = false
+        var response: JSONObject? = null
         tracer.addDebug(Log.DEBUG, TAG, "Triggering open check url")
 
         checkNetworks()
@@ -90,26 +85,21 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
             if (it) {
                 tracer.addDebug(Log.DEBUG, TAG, "-> After forcing isAvailable? ${isCellularAvailable()}")
                 tracer.addDebug(Log.DEBUG, TAG, "-> After forcing isBound? ${isCellularBoundToProcess()}")
-                // We have Mobile Data registered and bound for use
-                // However, user may still have no data plan!
-                // Phone Check needs to be done on a socket for 2 reasons:
-                // - Redirects may be HTTP rather than HTTPs, as OkHTTP will raise Exception for clearText
-                // - We are not interested in the full response body, headers etc.
                 val cs = ClientSocket()
-                cs.check(url, getOperator())
+                response = cs.check(url, getOperator())
             } else {
                 tracer.addDebug(Log.DEBUG, TAG, "We do not have a path")
             }
             checkNetworks()
         }
 
-        return calledOnCellularNetwork
+        return response
     }
 
     override fun checkWithTrace(url: URL): TraceInfo {
         tracer.startTrace()
-        val isConnectedOnCellular = check(url)
-        tracer.isTraceCollectedOnCellularNetwork = isConnectedOnCellular
+        val resp = check(url)
+        tracer.addResponseBody(resp)
         val traceInfo = tracer.getTrace()
         tracer.stopTrace()
         return traceInfo
