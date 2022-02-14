@@ -34,18 +34,6 @@ import java.io.IOException
 import java.net.URL
 import org.json.JSONObject
 
-/**
- * TruSDK main entry point.
- *
- * Usage example
- * ```
- * TruSDK.initializeSdk(requireContext())
- * private val truSdk = TruSDK.getInstance()
- *
- * truSdk.check(checkUrl)
- * truSdk.isReachable()
- * ```
- */
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class TruSDK private constructor(networkManager: CellularNetworkManager) {
     private val networkManager: NetworkManager = networkManager
@@ -75,7 +63,8 @@ class TruSDK private constructor(networkManager: CellularNetworkManager) {
     suspend fun openCheckUrl(@NonNull checkUrl: String): Boolean {
         Log.d("TruSDK", "openCheckURL")
         val networkManager: NetworkManager = getCellularNetworkManager()
-        return networkManager.check(url = URL(checkUrl))
+        networkManager.check(url = URL(checkUrl))
+        return true
     }
     /**
      * Execute a phone check verification, by performing a network request against the Mobile carrier
@@ -98,8 +87,16 @@ class TruSDK private constructor(networkManager: CellularNetworkManager) {
      * @return Indicating whether the request was made on a Cellular Network or not
      */
     @Throws(java.io.IOException::class)
+    @Deprecated("Use checkUrlWithResponseBody(checkUrl)", replaceWith = ReplaceWith("checkUrlWithResponseBody(checkUrl)"))
     suspend fun check(@NonNull checkUrl: String): Boolean {
         Log.d("TruSDK", "openCheckURL")
+        val networkManager: NetworkManager = getCellularNetworkManager()
+        networkManager.check(url = URL(checkUrl))
+        return true
+    }
+
+    suspend fun checkUrlWithResponseBody(@NonNull checkUrl: String): JSONObject? {
+        Log.d("TruSDK", "checkUrlWithResponseBody")
         val networkManager: NetworkManager = getCellularNetworkManager()
         return networkManager.check(url = URL(checkUrl))
     }
