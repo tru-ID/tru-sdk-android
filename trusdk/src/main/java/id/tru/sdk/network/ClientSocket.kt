@@ -116,6 +116,8 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         cmd.append("$HEADER_USER_AGENT: $userAgent$CRLF")
         if (operator != null)
             cmd.append("x-tru-ops: ${operator}$CRLF")
+        if (isEmulator())
+            cmd.append("x-tru-mode: sandbox$CRLF")
         cmd.append("Accept: text/html,application/xhtml+xml,application/xml,*/*$CRLF")
         var cs = StringBuffer()
         val iterator = cookies.orEmpty().listIterator()
@@ -311,6 +313,17 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         }
     }
 
+    private fun isEmulator(): Boolean {
+        return Build.FINGERPRINT.contains("generic")
+                || Build.FINGERPRINT.startsWith("unknown")
+                || Build.MODEL.contains("google_sdk")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86")
+                || Build.MANUFACTURER.contains("Genymotion")
+                || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+                || Build.PRODUCT.contains("sdk_gphone_x86");
+    }
+
     companion object {
         private const val TAG = "CellularClient"
         private const val HEADER_USER_AGENT = "User-Agent"
@@ -335,6 +348,5 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         fun getCookies(): ArrayList<String>? {
             return cs
         }
-
     }
 }
