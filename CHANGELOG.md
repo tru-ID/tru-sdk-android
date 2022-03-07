@@ -3,6 +3,12 @@
 
 Change Log
 ==========
+## Version 0.3.1
+_2022-03-07_
+
+**New**
+- Simulator supports
+
 ## Version 0.3.0
 _2022-02-11_
 
