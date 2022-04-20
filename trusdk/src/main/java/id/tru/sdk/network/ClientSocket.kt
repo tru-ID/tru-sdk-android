@@ -125,10 +125,10 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         var cookieCount = 0
         val iterator = cookies.orEmpty().listIterator()
         for (cookie in iterator) {
-            if (((cookie.secure && url.protocol == "https") || (!cookie.secure && url.protocol == "http"))
-                && (cookie.domain == null || (cookie.domain != null && url.host.contains(cookie.domain)))
-                && (cookie.path == null || cookie.path == url.path)) {
-                if (cookieCount>0)  cs.append("; ")
+            if (((cookie.secure && url.protocol == "https") || (!cookie.secure && url.protocol == "http")) && 
+                (cookie.domain == null || (cookie.domain != null && url.host.contains(cookie.domain))) && 
+                (cookie.path == null || cookie.path == url.path)) {
+                if (cookieCount > 0) cs.append("; ")
                 cs.append(cookie.name+"="+cookie.value)
                 cookieCount++
             }
@@ -198,7 +198,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         } catch (ex: Exception) {
             tracer.addDebug(Log.DEBUG, TAG, "Client exception : ${ex.message}")
             tracer.addTrace("Client exception ${ex.message}\n")
-            socket.close()
+            if (!socket.isClosed) socket.close()
             return false
         }
     }
@@ -327,14 +327,14 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
     }
 
     private fun isEmulator(): Boolean {
-        return Build.FINGERPRINT.contains("generic")
-                || Build.FINGERPRINT.startsWith("unknown")
-                || Build.MODEL.contains("google_sdk")
-                || Build.MODEL.contains("Emulator")
-                || Build.MODEL.contains("Android SDK built for x86")
-                || Build.MANUFACTURER.contains("Genymotion")
-                || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
-                || Build.PRODUCT.contains("sdk_gphone_x86");
+        return Build.FINGERPRINT.contains("generic") || 
+            Build.FINGERPRINT.startsWith("unknown") || 
+            Build.MODEL.contains("google_sdk") || 
+            Build.MODEL.contains("Emulator") || 
+            Build.MODEL.contains("Android SDK built for x86") || 
+            Build.MANUFACTURER.contains("Genymotion") || 
+            (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) || 
+            Build.PRODUCT.contains("sdk_gphone_x86")
     }
 
     companion object {
