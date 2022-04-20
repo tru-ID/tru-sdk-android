@@ -175,7 +175,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
     }
 
     private fun startConnection(url: URL) : Boolean {
-        var port = PORT_80
+       var port = PORT_80
         if (url.port > 0) port = url.port
         tracer.addDebug(Log.DEBUG, TAG, "start : ${url.host} ${url.port} ${url.protocol}")
         tracer.addTrace("\nStart connection ${url.host} ${url.port} ${url.protocol} ${DateUtils.now()}\n")
@@ -187,6 +187,12 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
             } else {
                 Socket(url.host, port)
             }
+        } catch (ex: Exception) {
+            tracer.addDebug(Log.DEBUG, TAG, "Cannot create socket exception : ${ex.message}")
+            tracer.addTrace("Cannot create socket exception ${ex.message}\n")
+            return false
+        }
+        return try {
             tracer.addDebug(Log.DEBUG, TAG, "Client created : ${socket.inetAddress.hostAddress} ${socket.port}")
             socket.soTimeout = 5*1000
             output = socket.getOutputStream()
@@ -194,12 +200,12 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
 
             tracer.addDebug(Log.DEBUG, TAG, "Client connected : ${socket.inetAddress.hostAddress} ${socket.port}")
             tracer.addTrace("Connected ${DateUtils.now()}\n")
-            return true
+            true
         } catch (ex: Exception) {
             tracer.addDebug(Log.DEBUG, TAG, "Client exception : ${ex.message}")
             tracer.addTrace("Client exception ${ex.message}\n")
             if (!socket.isClosed) socket.close()
-            return false
+            false
         }
     }
 
