@@ -3,8 +3,14 @@
 
 Change Log
 ==========
+## Version 0.3.3
+_2022-04-20_
+
+**Bug Fix**
+- "startConnection" error
+
 ## Version 0.3.2
-_2022-04-27_
+_2022-03-27_
 
 **Bug Fix**
 - Redirect handling

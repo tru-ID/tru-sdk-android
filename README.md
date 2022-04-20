@@ -16,7 +16,7 @@ https://gitlab.com/api/v4/projects/22035475/packages/maven
 build.gradle -> dependencies add
 
 ```
-    implementation 'id.tru.sdk:tru-sdk-android:0.3.2'
+    implementation 'id.tru.sdk:tru-sdk-android:0.3.3'
     implementation 'commons-io:commons-io:2.4'
 ```
 
@@ -32,15 +32,24 @@ Usage example
 ```
 import id.tru.sdk.TruSDK
 
+// instantiate the sdk during app startup
 TruSDK.initializeSdk(this.applicationContext)
+
+// check if device is eligible
+val reachabilityDetails = TruSDK.getInstance().isReachable()
+if (reachabilityDetails!=null) {
+
+}
+
+// create a PhoneCheck with your backend 
+// in order to get a check URL
 ...
-val truSdk = TruSDK.getInstance()
+
+// trigger the check URL from the device
+val response = TruSDK.getInstance().checkUrlWithResponseBody(checkUrl)
 ...
 
-val response = truSdk.checkUrlWithResponseBody(checkUrl)
-
-val reachabilityDetails = truSdk.isReachable()
-
+// retrieve PhoneCheck result from your backend
 ```
 
 
