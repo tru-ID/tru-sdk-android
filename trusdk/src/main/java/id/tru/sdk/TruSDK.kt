@@ -32,6 +32,7 @@ import id.tru.sdk.network.NetworkManager
 import id.tru.sdk.network.TraceInfo
 import java.io.IOException
 import java.net.URL
+import java.net.MalformedURLException
 import org.json.JSONObject
 
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
@@ -63,8 +64,13 @@ class TruSDK private constructor(networkManager: CellularNetworkManager) {
     suspend fun openCheckUrl(@NonNull checkUrl: String): Boolean {
         Log.d("TruSDK", "openCheckURL")
         val networkManager: NetworkManager = getCellularNetworkManager()
-        networkManager.check(url = URL(checkUrl))
-        return true
+        return try {
+            networkManager.check(url = URL(checkUrl))
+            true
+        } catch (ex: MalformedURLException) {
+            Log.e(TAG, "MalformedURLException for:$checkUrl message: ${ex.message}")
+            false
+        }
     }
     /**
      * Execute a phone check verification, by performing a network request against the Mobile carrier
@@ -91,14 +97,24 @@ class TruSDK private constructor(networkManager: CellularNetworkManager) {
     suspend fun check(@NonNull checkUrl: String): Boolean {
         Log.d("TruSDK", "openCheckURL")
         val networkManager: NetworkManager = getCellularNetworkManager()
-        networkManager.check(url = URL(checkUrl))
-        return true
+        return try {
+            networkManager.check(url = URL(checkUrl))
+            true
+        } catch (ex: MalformedURLException) {
+            Log.e(TAG, "MalformedURLException for:$checkUrl message: ${ex.message}")
+            false
+        }
     }
 
     suspend fun checkUrlWithResponseBody(@NonNull checkUrl: String): JSONObject? {
         Log.d("TruSDK", "checkUrlWithResponseBody")
         val networkManager: NetworkManager = getCellularNetworkManager()
-        return networkManager.check(url = URL(checkUrl))
+        return try {
+            return networkManager.check(url = URL(checkUrl))
+        } catch (ex: MalformedURLException) {
+            Log.e(TAG, "MalformedURLException for:$checkUrl message: ${ex.message}")
+            null
+        }
     }
 
     /**
@@ -139,58 +155,88 @@ class TruSDK private constructor(networkManager: CellularNetworkManager) {
      * describing the issue.
      */
     fun isReachable(dataResidency: String?): ReachabilityDetails? {
-        var geo = "eu"
-        if (dataResidency != null && dataResidency.length == 2) geo = dataResidency.lowercase()
-        val endpoint = String.format(BuildConfig.TRU_ID_DEVICE_ID_SERVER_URL, geo)
-        Log.d(TAG, "ReachabilityDetails for endpoint:$endpoint")
-        val networkManager: NetworkManager = getCellularNetworkManager()
-        val json: JSONObject? = networkManager.getJSON(url = URL(endpoint))
         var reachabilityDetails: ReachabilityDetails? = null
-        Log.d("TruSDK", "isReachable: $json")
-        if (json != null) {
-            if (json.has("network_id")) {
-                // We have reachability details
-                val country = if (json.has("country_code")) { json.getString("country_code") } else { "" }
-                val networkId = if (json.has("network_id")) { json.getString("network_id") } else { "" }
-                val networkName = if (json.has("network_name")) { json.getString("network_name") } else { "" }
-                val links = if (json.has("_links")) { json.getString("_links") } else { null }
-                val products: ArrayList<Product>? = if (json.has("products")) {
-                    val array = json.getJSONArray("products")
-                    var _prod: ArrayList<Product> = ArrayList<Product>()
-                    for (i in 0 until array.length()) {
-                        val item = array.getJSONObject(i)
-                        val productName = item.getString("product_name")
-                        val productId = item.getString("product_id")
-                        _prod.add(Product(productId, productName))
-                    }
-                    _prod
-                } else { null }
-                    reachabilityDetails = ReachabilityDetails(null, country, networkId, networkName, products, links)
-            } else {
-                val title = if (json.has("title")) {
-                    json.getString("title")
-                } else {
-                    null
-                }
-                val type = if (json.has("type")) {
-                    json.getString("type")
-                } else {
-                    null
-                }
-                val status = if (json.has("status")) {
-                    json.getInt("status")
-                } else {
-                    0
-                }
-                val detail = if (json.has("detail")) {
-                    json.getString("detail")
-                } else {
-                    null
-                }
-                var error = ReachabilityError(type, title, status, detail)
-
-                reachabilityDetails = ReachabilityDetails(error, "", "", "", null, null)
+        try {
+            var geo = "eu"
+            if (dataResidency != null && dataResidency.length == 2) geo = dataResidency.lowercase()
+            val endpoint = String.format(BuildConfig.TRU_ID_DEVICE_ID_SERVER_URL, geo)
+            Log.d(TAG, "ReachabilityDetails for endpoint:$endpoint")
+            val networkManager: NetworkManager = getCellularNetworkManager()
+            val json: JSONObject?
+            try {
+                json = networkManager.getJSON(url = URL(endpoint))
+            } catch (ex: MalformedURLException) {
+                Log.e(TAG, "MalformedURLException for :$endpoint message: ${ex.message}")
+                return ReachabilityDetails(ReachabilityError(null, null, 0, null), "", "", "", null, null)
             }
+            Log.d("TruSDK", "isReachable: $json")
+            if (json != null) {
+                if (json.has("network_id")) {
+                    // We have reachability details
+                    val country = if (json.has("country_code")) {
+                        json.getString("country_code")
+                    } else {
+                        ""
+                    }
+                    val networkId = if (json.has("network_id")) {
+                        json.getString("network_id")
+                    } else {
+                        ""
+                    }
+                    val networkName = if (json.has("network_name")) {
+                        json.getString("network_name")
+                    } else {
+                        ""
+                    }
+                    val links = if (json.has("_links")) {
+                        json.getString("_links")
+                    } else {
+                        null
+                    }
+                    val products: ArrayList<Product>? = if (json.has("products")) {
+                        val array = json.getJSONArray("products")
+                        var _prod: ArrayList<Product> = ArrayList<Product>()
+                        for (i in 0 until array.length()) {
+                            val item = array.getJSONObject(i)
+                            val productName = item.getString("product_name")
+                            val productId = item.getString("product_id")
+                            _prod.add(Product(productId, productName))
+                        }
+                        _prod
+                    } else {
+                        null
+                    }
+                    reachabilityDetails =
+                        ReachabilityDetails(null, country, networkId, networkName, products, links)
+                } else {
+                    val title = if (json.has("title")) {
+                        json.getString("title")
+                    } else {
+                        null
+                    }
+                    val type = if (json.has("type")) {
+                        json.getString("type")
+                    } else {
+                        null
+                    }
+                    val status = if (json.has("status")) {
+                        json.getInt("status")
+                    } else {
+                        0
+                    }
+                    val detail = if (json.has("detail")) {
+                        json.getString("detail")
+                    } else {
+                        null
+                    }
+                    var error = ReachabilityError(type, title, status, detail)
+
+                    reachabilityDetails = ReachabilityDetails(error, "", "", "", null, null)
+                }
+            }
+        } catch (ex: Exception) {
+            Log.e(TAG, "Exception message: ${ex.message}")
+            reachabilityDetails = ReachabilityDetails(ReachabilityError(null, null, 0, null), "", "", "", null, null)
         }
         return reachabilityDetails
     }
@@ -225,7 +271,12 @@ class TruSDK private constructor(networkManager: CellularNetworkManager) {
     fun getJsonResponse(@NonNull endpoint: String): JSONObject? {
         Log.d(TAG, "getJsonResponse for endpoint:$endpoint")
         val networkManager: NetworkManager = getCellularNetworkManager()
-        return networkManager.getJSON(url = URL(endpoint))
+        return try {
+            networkManager.getJSON(url = URL(endpoint))
+        } catch (ex: MalformedURLException) {
+            Log.e(TAG, "MalformedURLException for:$endpoint message: ${ex.message}")
+            null
+        }
     }
 
     /**
@@ -248,8 +299,13 @@ class TruSDK private constructor(networkManager: CellularNetworkManager) {
     fun getJsonPropertyValue(@NonNull endpoint: String, @NonNull key: String): String? {
         Log.d(TAG, "getJsonPropertyValue for endpoint:$endpoint key:$key")
         val networkManager: NetworkManager = getCellularNetworkManager()
-        val json: JSONObject? = networkManager.getJSON(url = URL(endpoint))
-        return json?.optString(key)
+        return try {
+            val json: JSONObject? = networkManager.getJSON(url = URL(endpoint))
+            json?.optString(key)
+        } catch (ex: MalformedURLException) {
+            Log.e(TAG, "MalformedURLException for:$endpoint message: ${ex.message}")
+            null
+        }
     }
 
     private fun getCellularNetworkManager(): NetworkManager {

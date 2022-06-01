@@ -131,23 +131,28 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
     }
 
     private fun execute(onCompletion: (isSuccess: Boolean) -> Unit) {
-        val lock = ReentrantLock()
-        val condition = lock.newCondition()
+        try {
+            val lock = ReentrantLock()
+            val condition = lock.newCondition()
 
-        val capabilities = intArrayOf(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        val transportTypes = intArrayOf(NetworkCapabilities.TRANSPORT_CELLULAR)
+            val capabilities = intArrayOf(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            val transportTypes = intArrayOf(NetworkCapabilities.TRANSPORT_CELLULAR)
 
-        forceCellular(capabilities, transportTypes) { isOnCellular ->
-            lock.withLock {
-                // We have Mobile Data registered and bound for use
-                // However, user may still have no data plan!
-                onCompletion(isOnCellular)
-                condition.signal()
+            forceCellular(capabilities, transportTypes) { isOnCellular ->
+                lock.withLock {
+                    // We have Mobile Data registered and bound for use
+                    // However, user may still have no data plan!
+                    onCompletion(isOnCellular)
+                    condition.signal()
+                }
             }
-        }
 
-        lock.withLock {
-            condition.await()
+            lock.withLock {
+                condition.await()
+            }
+        } catch (ex: Exception) {
+            tracer.addDebug(Log.ERROR, TAG, "execute exception ${ex.message}")
+            onCompletion(false)
         }
     }
 
@@ -340,7 +345,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
     }
 
     private fun checkNetworks() {
-        tracer.addDebug(Log.DEBUG, TAG, "----- Check ------")
+        tracer.addDebug(Log.DEBUG, TAG, "----- Check Network ------")
         tracer.addDebug(Log.DEBUG, TAG, "Is Default Network Active? " + connectivityManager.isDefaultNetworkActive.toString())
         boundNetwork()
         activeNetworkInfo()
