@@ -188,21 +188,21 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
                 Socket(url.host, port)
             }
         } catch (ex: Exception) {
-            tracer.addDebug(Log.DEBUG, TAG, "Cannot create socket exception : ${ex.message}")
+            tracer.addDebug(Log.ERROR, TAG, "Cannot create socket exception : ${ex.message}")
             tracer.addTrace("Cannot create socket exception ${ex.message}\n")
             return false
         }
         return try {
-            tracer.addDebug(Log.DEBUG, TAG, "Client created : ${socket.inetAddress.hostAddress} ${socket.port}")
+            tracer.addDebug(Log.ERROR, TAG, "Client created : ${socket.inetAddress.hostAddress} ${socket.port}")
             socket.soTimeout = 5*1000
             output = socket.getOutputStream()
             input = BufferedReader(InputStreamReader(socket.inputStream))
 
-            tracer.addDebug(Log.DEBUG, TAG, "Client connected : ${socket.inetAddress.hostAddress} ${socket.port}")
+            tracer.addDebug(Log.ERROR, TAG, "Client connected : ${socket.inetAddress.hostAddress} ${socket.port}")
             tracer.addTrace("Connected ${DateUtils.now()}\n")
             true
         } catch (ex: Exception) {
-            tracer.addDebug(Log.DEBUG, TAG, "Client exception : ${ex.message}")
+            tracer.addDebug(Log.ERROR, TAG, "Client exception : ${ex.message}")
             tracer.addTrace("Client exception ${ex.message}\n")
             if (!socket.isClosed) socket.close()
             false
@@ -218,7 +218,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
             output.write(bytesOfRequest)
             output.flush()
         } catch (ex: Exception) {
-            tracer.addDebug(Log.DEBUG, TAG, "Client sending exception : ${ex.message}")
+            tracer.addDebug(Log.ERROR, TAG, "Client sending exception : ${ex.message}")
             tracer.addTrace("Client sending exception ${ex.message}\n")
         }
         tracer.addDebug(Log.DEBUG, TAG, "Response " + "\n")
@@ -286,7 +286,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
                 }
             }
         } catch (ex: Exception) {
-            tracer.addDebug(Log.DEBUG, TAG, "Client reading exception : ${ex.message}")
+            tracer.addDebug(Log.ERROR, TAG, "Client reading exception : ${ex.message}")
             tracer.addTrace("Client reading exception ${ex.message}\n")
         }
         return result

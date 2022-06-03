@@ -3,6 +3,12 @@
 
 Change Log
 ==========
+## Version 0.3.4
+_2022-06-01_
+
+**Changes**
+- Improved internal exception handling
+
 ## Version 0.3.3
 _2022-04-20_
 
