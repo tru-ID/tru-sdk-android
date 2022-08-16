@@ -1,6 +1,6 @@
 /*
  * MIT License
- * Copyright (C) 2020 4Auth Limited. All rights reserved
+ * Copyright (C) 2022 4Auth Limited. All rights reserved
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,11 +22,9 @@
  */
 package id.tru.sdk.network
 
-import java.net.URL
 import org.json.JSONObject
+import java.net.URL
 
 internal interface NetworkManager {
-    fun check(url: URL): JSONObject?
-    fun checkWithTrace(url: URL): TraceInfo
-    fun getJSON(url: URL): JSONObject?
+    fun openWithDataCellular(url: URL, debug:Boolean): JSONObject
 }

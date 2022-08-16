@@ -1,6 +1,6 @@
 /*
  * MIT License
- * Copyright (C) 2020 4Auth Limited. All rights reserved
+ * Copyright (C) 2022 4Auth Limited. All rights reserved
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,15 +25,10 @@ package id.tru.sdk.network
 import android.os.Build
 import android.util.Log
 import id.tru.sdk.BuildConfig
-import org.json.JSONObject
 
-/**
- * Collects trace and debugging information for each `check` session.
- */
 class TraceCollector private constructor() {
     private val debugInfo = DebugInfo()
     private val trace by lazy { StringBuilder() }
-    private var responseBody: JSONObject? = null
 
     private var isTraceEnabled = false
 
@@ -63,7 +58,7 @@ class TraceCollector private constructor() {
     }
 
     fun getTrace(): TraceInfo {
-        return TraceInfo(trace.toString(), debugInfo, responseBody)
+        return TraceInfo(trace.toString(), debugInfo)
     }
 
     @Synchronized
@@ -80,20 +75,13 @@ class TraceCollector private constructor() {
         return debugInfo
     }
 
-    fun addResponseBody(body: JSONObject?) {
-        responseBody = body
-    }
-
-    fun getResponseBody(): JSONObject? {
-        return responseBody
-    }
 
     companion object {
         val instance: TraceCollector by lazy { TraceCollector() }
     }
 }
 
-data class TraceInfo(val trace: String, val debugInfo: DebugInfo, val responseBody: JSONObject?)
+data class TraceInfo(val trace: String, val debugInfo: DebugInfo)
 
 class DebugInfo {
     private val bufferMap by lazy { mutableMapOf<String, String>() }
@@ -125,18 +113,18 @@ class DebugInfo {
     @Synchronized
     fun addLog(priority: Int, tag: String, msg: String) {
 
-        if (collectionEnabled) {
+        if(collectionEnabled) {
             bufferMap[DateUtils.now()] = "$tag - $msg"
         }
 
         if (consoleLogsEnabled) {
-            when (priority) {
-                2 -> Log.v(tag, msg) // VERBOSE
-                3 -> Log.d(tag, msg) // DEBUG
-                4 -> Log.i(tag, msg) // INFO
-                5 -> Log.w(tag, msg) // WARN
-                6 -> Log.e(tag, msg) // ERROR
-                else -> { // Fall back to //DEBUG
+            when(priority) {
+                2 -> Log.v(tag, msg)//VERBOSE
+                3 -> Log.d(tag, msg)//DEBUG
+                4 -> Log.i(tag, msg)//INFO
+                5 -> Log.w(tag, msg)//WARN
+                6 -> Log.e(tag, msg)//ERROR
+                else -> { //Fall back to //DEBUG
                     Log.d(tag, msg)
                 }
             }
@@ -155,7 +143,7 @@ class DebugInfo {
 }
 
 fun userAgent(): String {
-    return "tru-sdk-android" + "/" + BuildConfig.VERSION_NAME + " " + "Android" + "/" + Build.VERSION.RELEASE
+    return "tru-sdk-android" + "/" + BuildConfig.VERSION_NAME + "/" + Build.VERSION.SDK_INT + " " + "Android" + "/" + Build.VERSION.RELEASE + " " + Build.MANUFACTURER + "/" + Build.MODEL
 }
 
 fun deviceInfo(): String {
@@ -165,3 +153,4 @@ fun deviceInfo(): String {
     val versionRelease = Build.VERSION.RELEASE
     return "DeviceInfo: $manufacturer, $model, $version, $versionRelease \n User-Agent: ${userAgent()}\n"
 }
+

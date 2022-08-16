@@ -1,6 +1,6 @@
 /*
  * MIT License
- * Copyright (C) 2020 4Auth Limited. All rights reserved
+ * Copyright (C) 2022 4Auth Limited. All rights reserved
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,7 @@ import java.io.OutputStream
 import java.net.HttpCookie
 import java.net.Socket
 import java.net.URL
+import java.util.UUID
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import javax.net.ssl.SSLSocketFactory
@@ -44,11 +45,8 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
     private lateinit var output: OutputStream
     private lateinit var input: BufferedReader
 
-    /**
-     * To be used for phoneCheck.
-     * Sends an HTTP/HTTPS request over a Socket, and follows redirects up to MAX_REDIRECT_COUNT.
-     */
-    fun check(url: URL, operator: String?): JSONObject? {
+    fun open(url: URL, operator: String?): JSONObject {
+        val requestId: String = UUID.randomUUID().toString()
         var redirectURL: URL? = null
         var redirectCount = 0
         var result: ResultHandler? = null
@@ -56,49 +54,50 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
             redirectCount += 1
             val nurl = redirectURL ?: url
             tracer.addDebug(Log.DEBUG, TAG, "Requesting: $nurl")
-            if (startConnection(nurl)) {
+            try {
+                startConnection(nurl)
                 if (redirectCount == 1)
-                    result = sendCommand(nurl, operator, null)
+                    result = sendCommand(nurl, operator, null, requestId)
                 else
-                    result = sendCommand(nurl, null, result?.getCookies())
+                    result = sendCommand(nurl, null, result?.getCookies(), requestId)
                 if (result != null && result.getRedirect() != null)
                     redirectURL = result.getRedirect()
                 else
                     redirectURL = null
                 stopConnection()
-            } else
+            } catch (ex: Exception) {
                 tracer.addDebug(Log.DEBUG, TAG, "Cannot start connection: $nurl")
+                return convertError("sdk_connection_error", "ex: ".plus(ex.localizedMessage))
+            }
         } while (redirectURL != null && redirectCount <= MAX_REDIRECT_COUNT)
-        tracer.addDebug(Log.DEBUG, TAG, "Check complete")
-        if (result?.getBody() != null) {
-            try {
-                return JSONObject(result.getBody())
-            } catch (e: JSONException) {
-                tracer.addDebug(Log.ERROR, TAG, "JSONException: $e")
-            }
+        if (redirectCount == MAX_REDIRECT_COUNT)
+            return convertError("sdk_redirect_error", "Too many redirects")
+        tracer.addDebug(Log.DEBUG, TAG, "Open completed")
+        if (result != null)
+            return convertResultHandler(result)
+        return convertError("sdk_error", "internal error")
+    }
+
+    private fun convertResultHandler(res: ResultHandler) : JSONObject {
+        try {
+            var json: JSONObject = JSONObject()
+            json.put("http_status", res.getHttpStatus())
+            if (res.getBody() != null)
+                json.put("response_body", JSONObject(res.getBody()))
+            return json
+        } catch (e: JSONException) {
+            return convertError("sdk_error",  "ex: ".plus(e.localizedMessage))
         }
-        return null
     }
 
-    fun getJSON(url: URL, operator: String?): JSONObject? {
-        var result: ResultHandler?
-        tracer.addDebug(Log.DEBUG, TAG, "Requesting: $url")
-        if (startConnection(url)) {
-            result = sendCommand(url, operator, null)
-            stopConnection()
-            if (result?.getBody() != null) {
-                try {
-                    return JSONObject(result.getBody())
-                } catch (e: JSONException) {
-                    tracer.addDebug(Log.ERROR, TAG, "JSONException: $e")
-                }
-            }
-        } else
-            tracer.addDebug(Log.DEBUG, TAG, "Cannot start connection: $url")
-        return null
+    private fun convertError(code: String, description: String) : JSONObject {
+        var json: JSONObject = JSONObject()
+        json.put( "error", code)
+        json.put("error_description",description)
+        return json
     }
 
-    private fun makeHTTPCommand(url: URL, operator: String?, cookies: ArrayList<HttpCookie>?): String {
+    private fun makeHTTPCommand(url: URL, operator: String?, cookies: ArrayList<HttpCookie>?, requestId: String?): String {
         val CRLF = "\r\n"
         val cmd = StringBuffer()
         cmd.append("GET " + url.path)
@@ -115,6 +114,8 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         cmd.append(CRLF)
         val userAgent = userAgent()
         cmd.append("$HEADER_USER_AGENT: $userAgent$CRLF")
+        if (requestId != null)
+            cmd.append("x-tru-sdk-request: ${requestId}$CRLF")
         if (operator != null)
             cmd.append("x-tru-ops: ${operator}$CRLF")
         if (isEmulator())
@@ -125,57 +126,27 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         var cookieCount = 0
         val iterator = cookies.orEmpty().listIterator()
         for (cookie in iterator) {
-            if (((cookie.secure && url.protocol == "https") || (!cookie.secure && url.protocol == "http")) && 
-                (cookie.domain == null || (cookie.domain != null && url.host.contains(cookie.domain))) && 
-                (cookie.path == null || cookie.path == url.path)) {
-                if (cookieCount > 0) cs.append("; ")
+            if (((cookie.secure && url.protocol == "https") || (!cookie.secure && url.protocol == "http"))
+                && (cookie.domain == null || (cookie.domain != null && url.host.contains(cookie.domain)))
+                && (cookie.path == null || cookie.path == url.path)) {
+                if (cookieCount>0)  cs.append("; ")
                 cs.append(cookie.name+"="+cookie.value)
                 cookieCount++
             }
         }
-        if (cs.length>1) cmd.append("Cookie: "+cs.toString()+"$CRLF")
+        if (cs.length > 1) cmd.append("Cookie: "+cs.toString()+"$CRLF")
 
         cmd.append("Connection: close$CRLF$CRLF")
         return cmd.toString()
     }
 
-    private fun sendCommand(url: URL, operator: String?, cookies: ArrayList<HttpCookie>?): ResultHandler? {
-        val command = makeHTTPCommand(url, operator, cookies)
+    private fun sendCommand(url: URL, operator: String?, cookies: ArrayList<HttpCookie>?, requestId: String?): ResultHandler? {
+        val command = makeHTTPCommand(url, operator, cookies, requestId)
         return sendAndReceive(url, command, cookies)
     }
 
-    fun sendPatchCommand(url: URL, payload: String?, cookies: ArrayList<HttpCookie>?): ResultHandler? {
-        val command = makePatchHTTPCommand(url, payload)
-        return sendAndReceive(url, command.toString(), cookies)
-    }
-
-    private fun makePatchHTTPCommand(url: URL, payload: String?): String {
-        var CRLF = "\r\n"
-        var cmd = StringBuffer()
-        var body: String = "[{\"op\": \"add\",\"path\":\"/payload\",\"value\": " + payload + "}]"
-        cmd.append("PATCH " + url.path)
-        if (url.query != null) {
-            cmd.append("?" + url.query)
-        }
-        cmd.append(" HTTP/1.1$CRLF")
-        cmd.append("Host: " + url.host)
-        if (url.protocol == "https" && url.port > 0 && url.port != PORT_443) {
-            cmd.append(":" + url.port)
-        } else if (url.protocol == "http" && url.port > 0 && url.port != PORT_80) {
-            cmd.append(":" + url.port)
-        }
-        cmd.append(CRLF)
-        val userAgent = userAgent()
-        cmd.append("$HEADER_USER_AGENT: $userAgent$CRLF")
-        cmd.append("Accept: */*$CRLF")
-        cmd.append("Content-Type: application/json-patch+json$CRLF")
-        cmd.append("Content-Length: " + body.length + "$CRLF")
-        cmd.append("$CRLF" + body)
-        return cmd.toString()
-    }
-
-    private fun startConnection(url: URL) : Boolean {
-       var port = PORT_80
+    private fun startConnection(url: URL) {
+        var port = PORT_80
         if (url.port > 0) port = url.port
         tracer.addDebug(Log.DEBUG, TAG, "start : ${url.host} ${url.port} ${url.protocol}")
         tracer.addTrace("\nStart connection ${url.host} ${url.port} ${url.protocol} ${DateUtils.now()}\n")
@@ -190,22 +161,20 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         } catch (ex: Exception) {
             tracer.addDebug(Log.ERROR, TAG, "Cannot create socket exception : ${ex.message}")
             tracer.addTrace("Cannot create socket exception ${ex.message}\n")
-            return false
+            throw ex
         }
         return try {
-            tracer.addDebug(Log.ERROR, TAG, "Client created : ${socket.inetAddress.hostAddress} ${socket.port}")
+            tracer.addDebug(Log.DEBUG, TAG, "Client created : ${socket.inetAddress.hostAddress} ${socket.port}")
             socket.soTimeout = 5*1000
             output = socket.getOutputStream()
             input = BufferedReader(InputStreamReader(socket.inputStream))
-
-            tracer.addDebug(Log.ERROR, TAG, "Client connected : ${socket.inetAddress.hostAddress} ${socket.port}")
+            tracer.addDebug(Log.DEBUG, TAG, "Client connected : ${socket.inetAddress.hostAddress} ${socket.port}")
             tracer.addTrace("Connected ${DateUtils.now()}\n")
-            true
         } catch (ex: Exception) {
             tracer.addDebug(Log.ERROR, TAG, "Client exception : ${ex.message}")
             tracer.addTrace("Client exception ${ex.message}\n")
             if (!socket.isClosed) socket.close()
-            false
+            throw ex
         }
     }
 
@@ -220,6 +189,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         } catch (ex: Exception) {
             tracer.addDebug(Log.ERROR, TAG, "Client sending exception : ${ex.message}")
             tracer.addTrace("Client sending exception ${ex.message}\n")
+            throw ex
         }
         tracer.addDebug(Log.DEBUG, TAG, "Response " + "\n")
         tracer.addTrace("Response - ${DateUtils.now()} \n")
@@ -229,7 +199,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         var result: ResultHandler? = null
         var bodyBegin: Boolean = false
         var cookies: ArrayList<HttpCookie> = ArrayList<HttpCookie>()
-        if (existingCookies!=null) cookies.addAll(existingCookies)
+        if (existingCookies != null) cookies.addAll(existingCookies)
 
         try {
             // convert the entire stream in a String
@@ -245,11 +215,6 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
                             status = Integer.valueOf(parts[1])
                             tracer.addDebug(Log.DEBUG, TAG, "Status - $status")
                             tracer.addTrace("Status - $status ${DateUtils.now()}\n")
-                            if (status == 200) {
-                                continue
-                            } else if (status < 300 || status > 310) {
-                                break
-                            }
                         }
                     } else if (line.contains("Set-Cookie:") || line.contains("set-cookie:")) {
                         val parts: List<String> = line.split("ookie:")
@@ -265,14 +230,14 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
                             }
                         }
                     } else if (line.contains("Location:") || line.contains("location:")) {
-                        result = parseRedirect(requestURL, line.replace("\r",""), cookies)
+                        result = parseRedirect(status, requestURL, line.replace("\r",""), cookies)
                     } else if (line.contains("Content-Type:")) {
                         var parts = line.split(" ")
-                        if (!parts.isEmpty() && parts.size>1) {
+                        if (!parts.isEmpty() && parts.size > 1) {
                             type = parts[1].replace(";","").replace("\r","")
                         }
                         tracer.addDebug(Log.DEBUG, TAG, "Type - $type\n")
-                    } else if (status == 200 && ("application/json".equals(type) || "application/hal+json".equals(type)) && line.equals("\r")) {
+                    } else if (("application/json".equals(type) || "application/hal+json".equals(type) || "application/problem+json".equals(type)) && line.equals("\r")) {
                         bodyBegin = true
                     } else if ( bodyBegin ) {
                         body = if (body!=null) body + line.replace("\r","") else line.replace("\r","")
@@ -281,13 +246,17 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
                 }
                 tracer.addDebug(Log.DEBUG, TAG, "Status - $status\nBody - $body\n")
                 tracer.addTrace("Status - $status ${DateUtils.now()}\nBody - $body\n")
-                if (status == 200 && body != "") {
-                    result = ResultHandler(null, parseBodyIntoJSONString(body), cookies)
-                }
+                result = if (result != null)
+                    return result
+                else if (bodyBegin && body != null) {
+                    ResultHandler(status,null, parseBodyIntoJSONString(body), cookies)
+                } else
+                    ResultHandler(status,null, null, null)
             }
         } catch (ex: Exception) {
             tracer.addDebug(Log.ERROR, TAG, "Client reading exception : ${ex.message}")
             tracer.addTrace("Client reading exception ${ex.message}\n")
+            throw ex
         }
         return result
     }
@@ -302,7 +271,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         return null
     }
 
-    fun parseRedirect(requestURL: URL, redirectLine: String, cookies: ArrayList<HttpCookie>?): ResultHandler? {
+    fun parseRedirect(httpStatus: Int,requestURL: URL, redirectLine: String, cookies: ArrayList<HttpCookie>?): ResultHandler? {
         tracer.addDebug(Log.DEBUG, TAG, "parseRedirect : ${redirectLine}")
         var parts = redirectLine.split("ocation: ")
         if (parts.isNotEmpty() && parts.size > 1) {
@@ -312,11 +281,11 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
             var cleanRedirect = redirect.replace(" ", "+")
             tracer.addDebug(Log.DEBUG, TAG, "cleanRedirect : ${cleanRedirect}")
             if (!cleanRedirect.startsWith("http")) { // http & https
-                return ResultHandler(URL(requestURL, cleanRedirect), null, cookies)
+                return ResultHandler(httpStatus, URL(requestURL, cleanRedirect), null, cookies)
             }
             tracer.addDebug(Log.DEBUG, TAG, "Found redirect")
             tracer.addTrace("Found redirect - ${DateUtils.now()} \n")
-            return ResultHandler(URL(cleanRedirect), null, cookies)
+            return ResultHandler(httpStatus, URL(cleanRedirect), null, cookies)
         }
         return null
     }
@@ -333,14 +302,14 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
     }
 
     private fun isEmulator(): Boolean {
-        return Build.FINGERPRINT.contains("generic") || 
-            Build.FINGERPRINT.startsWith("unknown") || 
-            Build.MODEL.contains("google_sdk") || 
-            Build.MODEL.contains("Emulator") || 
-            Build.MODEL.contains("Android SDK built for x86") || 
-            Build.MANUFACTURER.contains("Genymotion") || 
-            (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) || 
-            Build.PRODUCT.contains("sdk_gphone_x86")
+        return Build.FINGERPRINT.contains("generic")
+                || Build.FINGERPRINT.startsWith("unknown")
+                || Build.MODEL.contains("google_sdk")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86")
+                || Build.MANUFACTURER.contains("Genymotion")
+                || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+                || Build.PRODUCT.contains("sdk_gphone_x86");
     }
 
     companion object {
@@ -351,10 +320,15 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         private const val PORT_443 = 443
     }
 
-    class ResultHandler(redirect: URL?, body: String?, cookies: ArrayList<HttpCookie>?) {
+    class ResultHandler(httpStatus: Int, redirect: URL?, body: String?, cookies: ArrayList<HttpCookie>?) {
+        val s:Int = httpStatus
         val r: URL? = redirect
         val b: String? = body
         val cs: ArrayList<HttpCookie>? = cookies
+
+        fun getHttpStatus(): Int {
+            return s
+        }
 
         fun getRedirect(): URL? {
             return r
