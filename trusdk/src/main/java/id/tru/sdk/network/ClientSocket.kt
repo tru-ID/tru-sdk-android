@@ -126,9 +126,9 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         var cookieCount = 0
         val iterator = cookies.orEmpty().listIterator()
         for (cookie in iterator) {
-            if (((cookie.secure && url.protocol == "https") || (!cookie.secure && url.protocol == "http"))
+            if (((cookie.secure && url.protocol == "https") || (!cookie.secure))
                 && (cookie.domain == null || (cookie.domain != null && url.host.contains(cookie.domain)))
-                && (cookie.path == null || cookie.path == url.path)) {
+                && (cookie.path == null || url.path.startsWith(cookie.path))) {
                 if (cookieCount>0)  cs.append("; ")
                 cs.append(cookie.name+"="+cookie.value)
                 cookieCount++
