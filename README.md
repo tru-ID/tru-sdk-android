@@ -55,7 +55,7 @@ build.gradle -> dependencies add
 
 
  * **Minimum Android SDK**: TruSDK requires a minimum API level of 21 (Android 5)
- * **Compile Android SDK**: TruSDK requires you to compile against API 30  (Android 11) or later.
+ * **Compile Android SDK**: TruSDK requires you to compile against API 31  (Android 12) or later.
 
  ## Size
 

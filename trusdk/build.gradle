@@ -8,14 +8,14 @@ plugins {
 apply from: "ktlint.gradle"
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion "30.0.2"
+    compileSdkVersion 31
+    buildToolsVersion "31.0.0"
 
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 30
+        targetSdkVersion 31
         versionCode 5
-        versionName "1.0.1"
+        versionName "1.0.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -34,6 +34,7 @@ android {
 
     kotlinOptions {
         jvmTarget = '1.8'
+
     }
 
     testOptions {
@@ -55,7 +56,7 @@ publishing {
         aar(MavenPublication) {
             groupId = 'id.tru.sdk'
             artifactId = 'tru-sdk-android'
-            version = '1.0.1'
+            version = '1.0.2'
             artifact("$buildDir/outputs/aar/${project.name}-release.aar")
         }
     }
