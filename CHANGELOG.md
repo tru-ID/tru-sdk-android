@@ -3,6 +3,12 @@
 
 Change Log
 ==========
+## Version 1.0.2
+_2022-10-31_
+
+**Changes**
+- targetSdkVersion increased to 31 (Android 12)
+
 ## Version 1.0.1
 _2022-09-29_
 
