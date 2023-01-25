@@ -23,7 +23,11 @@
 package id.tru.sdk.network
 
 import android.content.Context
-import android.net.*
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.net.TelephonyNetworkSpecifier
 import android.net.wifi.WifiNetworkSpecifier
 import android.net.wifi.aware.WifiAwareNetworkSpecifier
 import android.os.Build
@@ -31,13 +35,13 @@ import android.os.Looper
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.annotation.RequiresApi
-import org.json.JSONObject
 import java.net.URL
-import java.util.*
+import java.util.Timer
+import java.util.TimerTask
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.schedule
 import kotlin.concurrent.withLock
-
+import org.json.JSONObject
 
 /**
  * CellularNetworkManager requests Cellular Network from the system to be available to
@@ -64,8 +68,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
 
     private val tracer = TraceCollector.instance
 
-
-    override fun openWithDataCellular(url: URL, debug:Boolean): JSONObject {
+    override fun openWithDataCellular(url: URL, accessToken: String?, debug: Boolean): JSONObject {
         var calledOnCellularNetwork = false
         var response: JSONObject = JSONObject()
         tracer.addDebug(Log.DEBUG, TAG, "Triggering open check url")
@@ -91,7 +94,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
                 // However, user may still have no data plan!
                 val cs = ClientSocket()
                 if (debug) tracer.startTrace()
-                response = cs.open(url, getOperator())
+                response = cs.open(url, accessToken, getOperator())
                 if (debug) {
                     var json = JSONObject()
                     json.put("device_info", deviceInfo())
@@ -101,18 +104,18 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
                 }
             } else {
                 tracer.addDebug(Log.DEBUG, TAG, "We do not have a path")
-                 response = sendError("sdk_no_data_connectivity","Data connectivity not available")
+                response = sendError("sdk_no_data_connectivity", "Data connectivity not available")
             }
         }
         if (response.length() == 0)
-            response = sendError("sdk_error","internal error")
+            response = sendError("sdk_error", "internal error")
         return response
     }
 
-    private fun sendError(code: String, description: String) : JSONObject {
+    private fun sendError(code: String, description: String): JSONObject {
         var json: JSONObject = JSONObject()
         json.put("error", code)
-        json.put("error_description",description)
+        json.put("error_description", description)
         return json
     }
 
@@ -161,13 +164,8 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
      *
      */
     @Synchronized
-    private fun forceCellular(
-            capabilities: IntArray,
-            transportTypes: IntArray,
-            onCompletion: (isSuccess: Boolean) -> Unit) {
-
+    private fun forceCellular(capabilities: IntArray, transportTypes: IntArray, onCompletion: (isSuccess: Boolean) -> Unit) {
         tracer.addDebug(Log.DEBUG, TAG, "------ Forcing Cellular ------")
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!cellularInfo.isDataEnabled) {
                 Log.d(TAG, "Mobile Data is NOT enabled, we can not force cellular!")
@@ -192,14 +190,14 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
                     tracer.addDebug(Log.DEBUG, TAG, "Cellular OnAvailable:")
                     networkInfo(network)
                     try {
-                        //Binds the current process to network.  All Sockets created in the future
+                        // Binds the current process to network.  All Sockets created in the future
                         // (and not explicitly bound via a bound SocketFactory from {@link Network#getSocketFactory() Network.getSocketFactory()})
                         // will be bound to network.
                         tracer.addDebug(Log.DEBUG, TAG, "  Binding to process:")
                         bind(network)
                         tracer.addDebug(Log.DEBUG, TAG, "  Binding finished. Is Main thread? ${isMainThread()}")
                         cancelTimeout()
-                        onCompletion(true) //Network request needs to be done in this lambda
+                        onCompletion(true) // Network request needs to be done in this lambda
                     } catch (e: IllegalStateException) {
                         tracer.addDebug(Log.ERROR, TAG, "ConnectivityManager.NetworkCallback.onAvailable: $e")
                         cancelTimeout()
@@ -219,9 +217,9 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
 
                 override fun onUnavailable() {
                     tracer.addDebug(Log.DEBUG, TAG, "Cellular onUnavailable")
-                    //When this method gets called due to timeout, the callback will automatically be unregistered
-                    //So no need to call unregisterCellularNetworkListener()
-                    //But we should null it
+                    // When this method gets called due to timeout, the callback will automatically be unregistered
+                    // So no need to call unregisterCellularNetworkListener()
+                    // But we should null it
                     cellularNetworkCallBack = null
                     onCompletion(false)
                     super.onUnavailable()
@@ -231,7 +229,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
             tracer.addDebug(Log.DEBUG, TAG, "Creating a network builder on Main thread? ${isMainThread()}")
 
             val request = NetworkRequest.Builder()
-            //Just in case as per Documentation
+            // Just in case as per Documentation
             request.removeTransportType(NetworkCapabilities.TRANSPORT_WIFI)
             request.removeTransportType(NetworkCapabilities.TRANSPORT_BLUETOOTH)
 
@@ -257,10 +255,10 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
      * Return the Country Code of the Carrier + MCC + MNC
      * in uppercase
      */
-    private fun getOperator(): String?  {
-        if (cellularInfo.phoneType == TelephonyManager.PHONE_TYPE_GSM ) {
+    private fun getOperator(): String? {
+        if (cellularInfo.phoneType == TelephonyManager.PHONE_TYPE_GSM) {
             val op: String = cellularInfo.simOperator
-            tracer.addDebug(Log.DEBUG, TAG, "-> getOperator ${op}")
+            tracer.addDebug(Log.DEBUG, TAG, "-> getOperator $op")
             return op
         } else
             tracer.addDebug(Log.DEBUG, TAG, "-> getOperator not PHONE_TYPE_GSM!")
@@ -271,13 +269,13 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             ConnectivityManager.setProcessDefaultNetwork(network)
         } else {
-            connectivityManager.bindProcessToNetwork(network) //API Level 23, 6.0 Marsh
+            connectivityManager.bindProcessToNetwork(network) // API Level 23, 6.0 Marsh
         }
     }
 
     private fun requestNetwork(request: NetworkRequest, onCompletion: (isSuccess: Boolean) -> Unit) {
-        //The network request will live, until unregisterNetworkCallback is called or app exit.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {// API Level 26
+        // The network request will live, until unregisterNetworkCallback is called or app exit.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) { // API Level 26
             timeoutTask = Timer("Setting Up", true).schedule(TIME_OUT) {
                 tracer.addDebug(Log.DEBUG, TAG, "Timeout...")
                 Thread { onCompletion(false) }.start()
@@ -373,7 +371,7 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.R)// 30
+    @RequiresApi(api = Build.VERSION_CODES.R) // 30
     private fun networkType(capability: NetworkCapabilities) {
         when (capability.networkSpecifier) {
             is TelephonyNetworkSpecifier -> Log.d(TAG, "Cellular network")
@@ -436,6 +434,4 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
             }
         }
     }
-
-
 }

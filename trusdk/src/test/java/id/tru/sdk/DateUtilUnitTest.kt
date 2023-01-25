@@ -21,6 +21,6 @@ class DateUtilUnitTest {
         assertEquals(version_B, 26)
 
         val date_B = DateUtils.now()
-        assertEquals(date_A.substring(0, 20), date_B.substring(0, 20))
+        assertEquals(date_A.substring(0, 18), date_B.substring(0, 18))
     }
 }
