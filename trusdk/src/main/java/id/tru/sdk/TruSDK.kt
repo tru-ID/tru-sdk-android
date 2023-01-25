@@ -43,12 +43,25 @@ class TruSDK private constructor(networkManager: CellularNetworkManager) {
      * @param debug A flag to include or not the url trace in the response
      *
      */
-    fun openWithDataCellular(@NonNull url: URL, debug:Boolean): JSONObject {
+    fun openWithDataCellular(@NonNull url: URL, debug: Boolean): JSONObject {
         Log.d("TruSDK", "openWithDataCellular")
         val networkManager: NetworkManager = getCellularNetworkManager()
-        return networkManager.openWithDataCellular(url, debug)
+        return networkManager.openWithDataCellular(url, null, debug)
     }
 
+    /**
+     * Open a given url after forcing the data connectivity on the device
+     *
+     * @param url The url to be open over a data cellular connectivity.
+     * @param accessToken Optional Access Token to be added in the Authorization header (Bearer).
+     * @param debug A flag to include or not the url trace in the response
+     *
+     */
+    fun openWithDataCellularAndAccessToken(@NonNull url: URL, accessToken: String?, debug: Boolean): JSONObject {
+        Log.d("TruSDK", "openWithDataCellularAndAccessToken")
+        val networkManager: NetworkManager = getCellularNetworkManager()
+        return networkManager.openWithDataCellular(url, accessToken, debug)
+    }
 
     private fun getCellularNetworkManager(): NetworkManager {
         return networkManager

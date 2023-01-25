@@ -22,9 +22,9 @@
  */
 package id.tru.sdk.network
 
-import org.json.JSONObject
 import java.net.URL
+import org.json.JSONObject
 
 internal interface NetworkManager {
-    fun openWithDataCellular(url: URL, debug:Boolean): JSONObject
+    fun openWithDataCellular(url: URL, accessToken: String?, debug: Boolean): JSONObject
 }
