@@ -68,7 +68,7 @@ build.gradle -> dependencies add
 ## Usage example
 
 
-```
+```kotlin
 import id.tru.sdk.TruSDK
 
 // instantiate the sdk during app startup
@@ -88,9 +88,11 @@ val resp: JSONObject = TruSDK.getInstance().openWithDataCellular(URL(endpoint), 
 ```
 
 * Is the device eligible for tru.ID silent authentication?
-```
+```kotlin
     TruSDK.initializeSdk(this.applicationContext)
-    val resp: JSONObject = TruSDK.getInstance().openWithDataCellular(URL("https://eu.api.tru.id/public/coverage/v0.1/device_ip"), false)
+    // retreive access token with coverage scope from back-end
+    val accessToken = ...
+    val resp: JSONObject = TruSDK.getInstance().openWithDataCellularAndAccessToken(URL("https://eu.api.tru.id/coverage/v0.1/device_ip"), accessToken, false)
     if (resp.optString("error") != "") {
         println("not reachable: ${resp.optString("error_description","No error description found")}")
     } else {
@@ -111,7 +113,7 @@ val resp: JSONObject = TruSDK.getInstance().openWithDataCellular(URL(endpoint), 
 ```
 
 * How to open a check URL return by the [PhoneCheck API](https://developer.tru.id/docs/phone-check) or [SubscriberCheck API](https://developer.tru.id/docs/subscriber-check)
-```
+```kotlin
     val resp: JSONObject? = TruSDK.getInstance().openWithDataCellular(URL(checkUrl), false)
     if (resp.optString("error") != "") {
         println("Error: ${resp.optString("error_description","No error description found")}")
