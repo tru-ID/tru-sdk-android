@@ -87,12 +87,12 @@ val resp: JSONObject = TruSDK.getInstance().openWithDataCellular(URL(endpoint), 
 }
 ```
 
-* Is the device eligible for tru.ID silent authentication?
+* Is the [device eligible](https://developer.tru.id/docs/reference/utils#tag/coverage/operation/get-coverage-by-device-ip) for tru.ID silent authentication?
 ```kotlin
     TruSDK.initializeSdk(this.applicationContext)
     // retreive access token with coverage scope from back-end
     val accessToken = ...
-    val resp: JSONObject = TruSDK.getInstance().openWithDataCellularAndAccessToken(URL("https://eu.api.tru.id/coverage/v0.1/device_ip"), accessToken, false)
+    val resp: JSONObject = TruSDK.getInstance().openWithDataCellularAndAccessToken(URL("https://{data_residency}.api.tru.id/coverage/v0.1/device_ip"), accessToken, false)
     if (resp.optString("error") != "") {
         println("not reachable: ${resp.optString("error_description","No error description found")}")
     } else {
