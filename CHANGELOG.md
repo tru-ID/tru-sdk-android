@@ -3,6 +3,11 @@
 
 Change Log
 ==========
+## Version 1.0.4
+_2023-04-23_
+**New**
+- Changes removing dependency on commons-io
+
 ## Version 1.0.3
 _2023-01-23_
 **New**

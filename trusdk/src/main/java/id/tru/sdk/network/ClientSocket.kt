@@ -35,7 +35,6 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 import javax.net.ssl.SSLSocketFactory
-import org.apache.commons.io.IOUtils
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -205,7 +204,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
 
         try {
             // convert the entire stream in a String
-            var response: String? = IOUtils.toString(input)
+            var response: String? = input.use { it.readText() }
             response?.let {
                 val lines = response.split("\n")
                 for (line in lines) {
