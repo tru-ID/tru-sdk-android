@@ -44,12 +44,12 @@ Add our maven public repository to your IDE
 https://gitlab.com/api/v4/projects/22035475/packages/maven 
 ```
 
-build.gradle -> dependencies add
+build.gradle -> dependencies add 
 
 ```
     implementation 'id.tru.sdk:tru-sdk-android:x.y.z'
-    implementation 'commons-io:commons-io:2.4'
 ```
+See [CHANGELOG](./CHANGELOG.md) for latest version.
 
 ## Compatibility
 
