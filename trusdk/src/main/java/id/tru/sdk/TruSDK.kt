@@ -63,6 +63,12 @@ class TruSDK private constructor(networkManager: CellularNetworkManager) {
         return networkManager.openWithDataCellular(url, accessToken, debug)
     }
 
+    fun postWithDataCellular(@NonNull url: URL, headers: Map<String, String>, body: String?): JSONObject {
+        Log.d("TruSDK", "postWithDataCellular")
+        val networkManager: NetworkManager = getCellularNetworkManager()
+        return networkManager.postWithDataCellular(url, headers, body)
+    }
+
     private fun getCellularNetworkManager(): NetworkManager {
         return networkManager
     }

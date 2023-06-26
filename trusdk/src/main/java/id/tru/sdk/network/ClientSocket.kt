@@ -24,7 +24,6 @@ package id.tru.sdk.network
 
 import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStream
@@ -38,7 +37,6 @@ import javax.net.ssl.SSLSocketFactory
 import org.json.JSONException
 import org.json.JSONObject
 
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP) // API Level 21
 internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollector.instance) {
     private lateinit var socket: Socket
     private lateinit var output: OutputStream
@@ -77,16 +75,21 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         return convertError("sdk_error", "internal error")
     }
 
-    private fun convertResultHandler(res: ResultHandler): JSONObject {
+    private fun convertResultHandler(res: ResultResponse): JSONObject {
+        var json: JSONObject = JSONObject()
+        json.put("http_status", res.getHttpStatus())
         try {
-            var json: JSONObject = JSONObject()
-            json.put("http_status", res.getHttpStatus())
+
             if (res.getBody() != null)
                 json.put("response_body", JSONObject(res.getBody()))
             return json
         } catch (e: JSONException) {
-            return convertError("sdk_error", "ex: ".plus(e.localizedMessage))
+            if (res.getBody() != null)
+                json.put("response_raw_body", res.getBody())
+            else
+                return convertError("sdk_error", "ex: ".plus(e.localizedMessage))
         }
+        return json
     }
 
     private fun convertError(code: String, description: String): JSONObject {
@@ -96,8 +99,104 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         return json
     }
 
+    private fun makePost(url: URL, headers: Map<String, String>, body: String?): String {
+        val cmd = StringBuffer()
+        cmd.append("POST " + url.path)
+        cmd.append(" HTTP/1.1$CRLF")
+        cmd.append("Host: " + url.host)
+        if (url.protocol == "https" && url.port > 0 && url.port != PORT_443) {
+            cmd.append(":" + url.port)
+        } else if (url.protocol == "http" && url.port > 0 && url.port != PORT_80) {
+            cmd.append(":" + url.port)
+        }
+        cmd.append(CRLF)
+        headers.forEach { entry ->
+            cmd.append(entry.key + ": " + entry.value + "$CRLF")
+        }
+        if (body != null) {
+            cmd.append("Content-Length: " + body.length + "$CRLF")
+            cmd.append("Connection: close$CRLF$CRLF")
+            cmd.append(body)
+            cmd.append("$CRLF$CRLF")
+        } else {
+            cmd.append("Content-Length: 0$CRLF")
+            cmd.append("Connection: close$CRLF$CRLF")
+        }
+        return cmd.toString()
+    }
+
+    private fun sendAndReceive(request: String): ResponseHandler? {
+        tracer.addDebug(Log.DEBUG, TAG, "Client sending \n$request\n")
+        try {
+            val bytesOfRequest: ByteArray =
+                    request.toByteArray(Charset.forName(StandardCharsets.UTF_8.name()))
+            output.write(bytesOfRequest)
+            output.flush()
+        } catch (ex: Exception) {
+            tracer.addDebug(Log.ERROR, TAG, "Client sending exception : ${ex.message}")
+            throw ex
+        }
+        tracer.addDebug(Log.DEBUG, TAG, "Response " + "\n")
+        var status: Int = 0
+        var body: String = String()
+        var result: ResponseHandler? = null
+        var chunked: Boolean = false
+        try {
+            var response: String? = input.use { it.readText() }
+            tracer.addDebug(Log.DEBUG, TAG, "$response \n")
+            tracer.addDebug(Log.DEBUG, TAG, "--------" + "\n")
+            response?.let {
+                val lines = response.split("\n")
+                for (line in lines) {
+                    tracer.addDebug(Log.DEBUG, TAG, line)
+                    tracer.addTrace(line)
+                    if (line.startsWith("HTTP/")) {
+                        val parts = line.split(" ")
+                        if (parts.isNotEmpty() && parts.size >= 2) {
+                            status = Integer.valueOf(parts[1])
+                            tracer.addDebug(Log.DEBUG, TAG, "Status - $status")
+                        }
+                    } else if (line.startsWith("Transfer-Encoding:")) {
+                        var parts = line.split(" ")
+                        if (!parts.isEmpty() && parts.size > 1) {
+                            if (parts[1].contains("chunked")) chunked = true
+                        }
+                    } else if (line.contains(": ") && body.isEmpty()) {
+                        // do nothing
+                    } else {
+                        body += line.replace("\r", "")
+                        tracer.addDebug(Log.DEBUG, TAG, "Adding to body - $body\n")
+                    }
+                }
+                if (chunked && !body.isNullOrBlank()) {
+                    val r1: Int = body.indexOf("{")
+                    val r2: Int = body.lastIndexOf("}")
+                    if (r1 in 1 until r2) {
+                        body = body.substring(r1, r2 + 1)
+                    }
+                }
+                tracer.addDebug(Log.DEBUG, TAG, "Status - $status [$chunked]\nBody - $body\n")
+                result = ResponseHandler(status, body)
+            }
+        } catch (ex: Exception) {
+            tracer.addDebug(Log.ERROR, TAG, "Client reading exception : ${ex.message}")
+            throw ex
+        }
+        return result
+    }
+
+    fun post(url: URL, headers: Map<String, String>, body: String?): JSONObject {
+        startConnection(url)
+        val request = makePost(url, headers, body)
+        val response = sendAndReceive(request)
+        stopConnection()
+        if (response != null) {
+            return convertResultHandler(response)
+        }
+        return convertError("sdk_error", "internal error")
+    }
+
     private fun makeHTTPCommand(url: URL, accessToken: String?, operator: String?, cookies: ArrayList<HttpCookie>?, requestId: String?): String {
-        val CRLF = "\r\n"
         val cmd = StringBuffer()
         cmd.append("GET " + url.path)
         if (url.query != null) {
@@ -319,15 +418,16 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         private const val MAX_REDIRECT_COUNT = 10
         private const val PORT_80 = 80
         private const val PORT_443 = 443
+        private const val CRLF = "\r\n"
     }
 
-    class ResultHandler(httpStatus: Int, redirect: URL?, body: String?, cookies: ArrayList<HttpCookie>?) {
+    class ResultHandler(httpStatus: Int, redirect: URL?, body: String?, cookies: ArrayList<HttpCookie>?) : ResultResponse {
         val s: Int = httpStatus
         val r: URL? = redirect
         val b: String? = body
         val cs: ArrayList<HttpCookie>? = cookies
 
-        fun getHttpStatus(): Int {
+        override fun getHttpStatus(): Int {
             return s
         }
 
@@ -335,12 +435,31 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
             return r
         }
 
-        fun getBody(): String? {
+        override fun getBody(): String? {
             return b
         }
 
         fun getCookies(): ArrayList<HttpCookie>? {
             return cs
         }
+    }
+
+    class ResponseHandler(httpStatus: Int, body: String?) : ResultResponse {
+        val s: Int = httpStatus
+        val b: String? = body
+
+        override fun getHttpStatus(): Int {
+            return s
+        }
+
+        override fun getBody(): String? {
+            return b
+        }
+    }
+
+    internal interface ResultResponse {
+        fun getHttpStatus(): Int
+
+        fun getBody(): String?
     }
 }
