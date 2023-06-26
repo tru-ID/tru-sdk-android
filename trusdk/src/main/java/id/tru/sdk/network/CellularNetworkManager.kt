@@ -51,7 +51,7 @@ import org.json.JSONObject
  * make the cellular network visible to the process.
  *
  */
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP) // API 21, Android 5.0
+
 internal class CellularNetworkManager(context: Context) : NetworkManager {
 
     private val cellularInfo by lazy {
@@ -105,6 +105,27 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
             } else {
                 tracer.addDebug(Log.DEBUG, TAG, "We do not have a path")
                 response = sendError("sdk_no_data_connectivity", "Data connectivity not available")
+            }
+        }
+        if (response.length() == 0)
+            response = sendError("sdk_error", "internal error")
+        return response
+    }
+
+    override fun postWithDataCellular(url: URL, headers: Map<String, String>, body: String?): JSONObject {
+        var calledOnCellularNetwork = false
+        var response: JSONObject = JSONObject()
+        tracer.addDebug(Log.DEBUG, TAG, "Triggering postWithDataCellular")
+
+        execute {
+            calledOnCellularNetwork = it
+            if (it) {
+                // We have Mobile Data registered and bound for use
+                // However, user may still have no data plan!
+                val cs = ClientSocket()
+                response = cs.post(url, headers, body)
+            } else {
+                tracer.addDebug(Log.DEBUG, TAG, "We do not have a path")
             }
         }
         if (response.length() == 0)
