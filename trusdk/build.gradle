@@ -15,7 +15,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 33
         versionCode 5
-        versionName "1.0.5-preview"
+        versionName "1.0.5"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -64,7 +64,7 @@ publishing {
         aar(MavenPublication) {
             groupId = 'id.tru.sdk'
             artifactId = 'tru-sdk-android'
-            version = '1.0.5-preview'
+            version = '1.0.5'
             artifact("$buildDir/outputs/aar/${project.name}-release.aar")
         }
     }

@@ -153,7 +153,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
                     if (line.startsWith("HTTP/")) {
                         val parts = line.split(" ")
                         if (parts.isNotEmpty() && parts.size >= 2) {
-                            status = Integer.valueOf(parts[1])
+                            status = Integer.valueOf(parts[1].trim())
                             tracer.addDebug(Log.DEBUG, TAG, "Status - $status")
                         }
                     } else if (line.startsWith("Transfer-Encoding:")) {
@@ -312,7 +312,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
                     if (line.startsWith("HTTP/")) {
                         val parts = line.split(" ")
                         if (parts.isNotEmpty() && parts.size >= 2) {
-                            status = Integer.valueOf(parts[1])
+                            status = Integer.valueOf(parts[1].trim())
                             tracer.addDebug(Log.DEBUG, TAG, "Status - $status")
                             tracer.addTrace("Status - $status ${DateUtils.now()}\n")
                         }

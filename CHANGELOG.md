@@ -3,12 +3,15 @@
 
 Change Log
 ==========
-## Version 1.0.5-preview
-_2023-06-26_
+
+## Version 1.0.5
+_2023-07-04_
 **Changes**
 - kotlin_version 1.5.20
 - compileSdkVersion 33
 - targetSdkVersion 33
+**Bug Fix**
+- HTTP status parsing
 **New**
 - Convenience method `postWithDataCellular`
 
