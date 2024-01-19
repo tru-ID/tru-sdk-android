@@ -2,6 +2,10 @@
 # tru.ID SDK for Android
 
 Change Log
+## Version 1.0.7
+_2023-01-19_
+**Bug Fix**
+- `sendAndReceive` method updated
 ==========
 ## Version 1.0.6
 _2023-08-11_
