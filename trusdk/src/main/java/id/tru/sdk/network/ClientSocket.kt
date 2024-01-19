@@ -26,6 +26,7 @@ import android.os.Build
 import android.util.Log
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.io.IOException
 import java.io.OutputStream
 import java.net.HttpCookie
 import java.net.Socket
@@ -306,7 +307,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
 
         try {
             // convert the entire stream in a String
-            var response: String? = input.use { it.readText() }
+            var response: String? = readMultipleChars(input, 65536)
             response?.let {
                 val lines = response.split("\n")
                 for (line in lines) {
@@ -363,7 +364,17 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         }
         return result
     }
-
+    @Throws(IOException::class)
+    private fun readMultipleChars(reader: BufferedReader, length: Int): String? {
+        val chars = CharArray(length)
+        val charsRead = reader.read(chars, 0, length)
+        val result: String = if (charsRead != -1) {
+            String(chars, 0, charsRead)
+        } else {
+            ""
+        }
+        return result
+    }
     fun parseBodyIntoJSONString(body: String?): String? {
         if (body != null) {
             val start = body.indexOf("{")
