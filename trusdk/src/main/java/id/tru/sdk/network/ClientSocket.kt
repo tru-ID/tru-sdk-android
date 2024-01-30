@@ -44,6 +44,9 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
     private lateinit var input: BufferedReader
 
     fun open(url: URL, accessToken: String?, operator: String?): JSONObject {
+        if (url.protocol != "https") {
+            return convertError("invalid scheme", "Only HTTPS URLs are allowed")
+        }
         val requestId: String = UUID.randomUUID().toString()
         var redirectURL: URL? = null
         var redirectCount = 0
@@ -187,6 +190,9 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
     }
 
     fun post(url: URL, headers: Map<String, String>, body: String?): JSONObject {
+        if (url.protocol != "https") {
+            return convertError("invalid scheme", "Only HTTPS URLs are allowed")
+        }
         startConnection(url)
         val request = makePost(url, headers, body)
         val response = sendAndReceive(request)
