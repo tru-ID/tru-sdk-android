@@ -6,6 +6,8 @@ Change Log
 _2023-01-24_
 **Changes**
 - `send` and `post` methods updated to prevent http call requests
+- `post` method amended to prevent CRLF injections
+- `postWithDataCellular` method now deprecated and will be removed in future releases
 
 ## Version 1.0.7
 _2023-01-19_
