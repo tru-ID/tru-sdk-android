@@ -103,7 +103,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         return json
     }
 
-    fun makePost(url: URL, headers: Map<String, String>, body: String?): String {
+    private fun makePost(url: URL, headers: Map<String, String>, body: String?): String {
         val sanitizedUrl = URL(sanitizeInput(url.toString()))
         val sanitizedHost = sanitizeInput(sanitizedUrl.host)
         val cmd = StringBuffer()
@@ -119,7 +119,7 @@ internal class ClientSocket constructor(var tracer: TraceCollector = TraceCollec
         headers.forEach { entry ->
             val sanitizedValue = sanitizeInput(entry.value)
             cmd.append(entry.key + ": " + sanitizedValue + "$CRLF")
-//            cmd.append(entry.key + ": " + entry.value + "$CRLF")
+
         }
         if (body != null) {
             val sanitizedBody = sanitizeInput(body)
