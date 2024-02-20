@@ -63,6 +63,7 @@ class TruSDK private constructor(networkManager: CellularNetworkManager) {
         return networkManager.openWithDataCellular(url, accessToken, debug)
     }
 
+    @Deprecated("This method is deprecated and will be removed in the next release. It will not be replaced.")
     fun postWithDataCellular(@NonNull url: URL, headers: Map<String, String>, body: String?): JSONObject {
         Log.d("TruSDK", "postWithDataCellular")
         val networkManager: NetworkManager = getCellularNetworkManager()

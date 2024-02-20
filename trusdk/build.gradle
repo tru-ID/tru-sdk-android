@@ -15,7 +15,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 33
         versionCode 5
-        versionName "1.0.7"
+        versionName "1.0.8"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -64,7 +64,7 @@ publishing {
         aar(MavenPublication) {
             groupId = 'id.tru.sdk'
             artifactId = 'tru-sdk-android'
-            version = '1.0.7'
+            version = '1.0.8'
             artifact("$buildDir/outputs/aar/${project.name}-release.aar")
         }
     }
@@ -94,6 +94,7 @@ dependencies {
     testImplementation 'org.robolectric:robolectric:4.9.2'
     testImplementation "junit:junit:${junit_version}"
     testImplementation "com.squareup.okhttp3:mockwebserver:$okhttp_version"
+    testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
