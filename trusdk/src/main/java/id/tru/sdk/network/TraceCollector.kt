@@ -24,7 +24,7 @@ package id.tru.sdk.network
 
 import android.os.Build
 import android.util.Log
-import id.tru.android.BuildConfig
+import id.tru.sdk.BuildConfig
 
 class TraceCollector private constructor() {
     private val debugInfo = DebugInfo()
