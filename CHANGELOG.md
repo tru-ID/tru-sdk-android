@@ -2,6 +2,16 @@
 # tru.ID SDK for Android
 
 Change Log
+## Version 1.0.9
+_2023-07-01_
+**Changes**
+- targetSdkVersion updated to 34
+- kotlin_version updated to 1.8.0
+- gradlePluginVersion updated to 8.4.2
+- gradleVersion updated to 8.6
+- JavaVersion updated to 17
+- Previously deprecated `postWithDataCellular` method and relevant testing removed
+
 ## Version 1.0.8
 _2023-01-24_
 **Changes**

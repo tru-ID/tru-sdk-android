@@ -8,15 +8,14 @@ plugins {
 apply from: "ktlint.gradle"
 
 android {
-    compileSdkVersion 33
-    buildToolsVersion "34.0.0"
-
+    namespace = "id.tru.sdk"
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 33
+        compileSdk 34
+        targetSdkVersion 34
         versionCode 5
-        versionName "1.0.8"
-
+        versionName "1.0.9"
+        android.buildFeatures.buildConfig true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
@@ -32,12 +31,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
 
     }
 
@@ -64,7 +63,7 @@ publishing {
         aar(MavenPublication) {
             groupId = 'id.tru.sdk'
             artifactId = 'tru-sdk-android'
-            version = '1.0.8'
+            version = '1.0.9'
             artifact("$buildDir/outputs/aar/${project.name}-release.aar")
         }
     }
@@ -94,8 +93,7 @@ dependencies {
     testImplementation 'org.robolectric:robolectric:4.9.2'
     testImplementation "junit:junit:${junit_version}"
     testImplementation "com.squareup.okhttp3:mockwebserver:$okhttp_version"
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
 }

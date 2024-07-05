@@ -111,28 +111,6 @@ internal class CellularNetworkManager(context: Context) : NetworkManager {
             response = sendError("sdk_error", "internal error")
         return response
     }
-
-    override fun postWithDataCellular(url: URL, headers: Map<String, String>, body: String?): JSONObject {
-        var calledOnCellularNetwork = false
-        var response: JSONObject = JSONObject()
-        tracer.addDebug(Log.DEBUG, TAG, "Triggering postWithDataCellular")
-
-        execute {
-            calledOnCellularNetwork = it
-            if (it) {
-                // We have Mobile Data registered and bound for use
-                // However, user may still have no data plan!
-                val cs = ClientSocket()
-                response = cs.post(url, headers, body)
-            } else {
-                tracer.addDebug(Log.DEBUG, TAG, "We do not have a path")
-            }
-        }
-        if (response.length() == 0)
-            response = sendError("sdk_error", "internal error")
-        return response
-    }
-
     private fun sendError(code: String, description: String): JSONObject {
         var json: JSONObject = JSONObject()
         json.put("error", code)
