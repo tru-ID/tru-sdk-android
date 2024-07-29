@@ -54,7 +54,8 @@ See [CHANGELOG](./CHANGELOG.md) for latest version.
 ## Compatibility
 
  * **Minimum Android SDK**: TruSDK requires a minimum API level of 21 (Android 5)
- * **Compile Android SDK**: TruSDK requires you to compile against API 33  (Android 13) or later.
+ * **Compile Android SDK**: TruSDK requires you to compile against API 34  (Android 14) or later.
+ * **Java Version**: TruSDK is compatible with Java 11. Ensure your `compileOptions` and `kotlinOptions` in `build.gradle` are set to use Java 11 
 
  ## Size
 
@@ -85,7 +86,7 @@ val resp: JSONObject = TruSDK.getInstance().openWithDataCellular(URL(endpoint), 
 * Is the [device eligible](https://developer.tru.id/docs/reference/utils#tag/coverage/operation/get-coverage-by-device-ip) for tru.ID silent authentication?
 ```kotlin
     TruSDK.initializeSdk(this.applicationContext)
-    // retreive access token with coverage scope from back-end
+    // retrieve access token with coverage scope from back-end
     val accessToken = ...
     val resp: JSONObject = TruSDK.getInstance().openWithDataCellularAndAccessToken(URL("https://{data_residency}.api.tru.id/coverage/v0.1/device_ip"), accessToken, false)
     if (resp.optString("error") != "") {

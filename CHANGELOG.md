@@ -2,6 +2,11 @@
 # tru.ID SDK for Android
 
 Change Log
+## Version 1.0.10
+_2023-07-24_
+**Changes**
+- compileOptions set to Java version 11 for apps using JDK 11 to ensure compatibility.
+
 ## Version 1.0.9
 _2023-07-01_
 **Changes**
